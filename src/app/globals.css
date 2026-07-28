@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --foreground: #0f172a;
+  --foreground-secondary: #475569;
+  --primary: #1796d2;
+  --primary-hover: #1583b8;
+  --accent: #3cc8f2;
+  --success: #16a34a;
+  --warning: #f59e0b;
+  --danger: #dc2626;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(23, 150, 210, 0.15);
+  --card-shadow: 0 8px 32px 0 rgba(23, 150, 210, 0.08);
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #05070a;
+  --surface: #0e1623;
+  --card: #131d2e;
+  --foreground: #ffffff;
+  --foreground-secondary: #aeb7c1;
+  --primary: #3cc8f2;
+  --primary-hover: #1796d2;
+  --accent: #7be7ff;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --glass-bg: rgba(19, 29, 46, 0.6);
+  --glass-border: rgba(60, 200, 242, 0.15);
+  --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-foreground-secondary: var(--foreground-secondary);
+  --font-sans: "Inter", var(--font-geist-sans);
+  --font-heading: "Space Grotesk", var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* color-scheme ya adapta el popup nativo del <select> en la mayoría de
+   navegadores, pero se fuerza el color de las <option> como respaldo
+   (algunos Chrome/Windows ignoran color-scheme en el listbox). */
+select {
+  color-scheme: inherit;
+}
+
+select option {
+  background: var(--card);
+  color: var(--foreground);
+}
+
+@layer utilities {
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--card-shadow);
+  }
+
+  .glass-dark {
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
