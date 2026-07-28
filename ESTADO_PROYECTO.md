@@ -42,6 +42,7 @@ Credenciales sembradas por `npm run seed`:
 - Para cambiar algo en el sitio real hay que loguearse en el dashboard de la URL de producción, no en local.
 - `git push` / el deploy de Vercel **nunca tocan la base de datos**: `next build` (el comando de build que usa Vercel) solo compila código, no ejecuta `scripts/seed.ts` ni ninguna migración. Los únicos que escriben en Mongo son (a) el uso real del sitio (pedidos, ediciones desde el dashboard) y (b) correr `npm run seed` a mano.
 - `scripts/seed.ts` tiene una traba de seguridad: si `MONGODB_URI` apunta a algo que no sea local (ej. Atlas), se niega a correr salvo que se agregue `SEED_CONFIRM=yes` explícitamente — así un `npm run seed` corrido sin querer con la variable de Atlas todavía exportada no pisa el catálogo real por accidente.
+- Los cambios de esquema (Mongoose) son aditivos y retrocompatibles: agregar un campo nuevo con `default` (ej. `canApproveOwnEdits`) o un valor nuevo de enum (ej. el rol `operario`) no reescribe ni rompe los documentos viejos en Atlas — Mongoose aplica el default al leerlos. El único riesgo real al shippear una función nueva es el de siempre en cualquier software: si tiene un bug y alguien la usa en el sitio real, ese uso podría escribir un dato mal — por eso toda función nueva se valida con `tsc`/`eslint` y se prueba a mano (API o navegador) antes de darla por terminada.
 
 ## Estructura clave
 
@@ -104,3 +105,4 @@ Todo esto está *scaffolded* (el código ya existe y no rompe nada si falta), pe
 - Quién puede aprobar/editar a quién → `src/lib/auth/hierarchy.ts` (toda la lógica de jerarquía vive ahí, no repetida en cada route handler).
 - Algo no se exporta bien a Excel/PDF → `src/lib/*Export*.ts` (todos siguen el mismo patrón: `xlsx` + `jspdf`/`jspdf-autotable`).
 - El favicon/logo no actualiza en el navegador → es caché de favicons de Chrome, no del código (probar en incógnito).
+- Una imagen de producto no carga (ícono roto) → las fotos de `scripts/seed.ts` son URLs de Unsplash elegidas a mano (`IMG("<id>")`); esos IDs a veces dejan de existir del lado de Unsplash (404) sin que el código cambie. Ya pasó una vez (CPU-001, SSD-001, WEB-001, ACC-001) y se corrigió reemplazando los IDs rotos y parchando el campo `images` directo en Mongo (local y Atlas). Si vuelve a pasar, verificar con `curl -o /dev/null -w "%{http_code}" <url>` antes de asumir que es un bug de código.
