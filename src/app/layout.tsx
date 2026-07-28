@@ -13,10 +13,39 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+const SITE_URL = "https://power-it-one.vercel.app";
+const SITE_TITLE = "Power IT | Catálogo de Tecnología";
+const SITE_DESCRIPTION =
+  "Computadoras, hardware, periféricos y tecnología de última generación. Power IT: tecnología que impulsa tu mundo.";
+
 export const metadata: Metadata = {
-  title: "Power IT | Catálogo de Tecnología",
-  description:
-    "Computadoras, hardware, periféricos y tecnología de última generación. Power IT: tecnología que impulsa tu mundo.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    template: "%s | Power IT",
+  },
+  description: SITE_DESCRIPTION,
+  keywords: [
+    "Power IT",
+    "tecnología",
+    "computadoras",
+    "hardware",
+    "periféricos",
+    "catálogo tecnológico",
+  ],
+  openGraph: {
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    siteName: "Power IT",
+    locale: "es_AR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export default function RootLayout({
