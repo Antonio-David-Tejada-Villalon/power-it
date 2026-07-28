@@ -18,6 +18,7 @@ export const ROLE_PERMISSIONS: Record<Role, string[]> = {
     "orders:read",
     "orders:update_status",
   ],
+  operario: [],
   cliente: ["orders:own:read", "orders:own:create"],
 };
 

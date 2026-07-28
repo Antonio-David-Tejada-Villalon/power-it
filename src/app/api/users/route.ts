@@ -4,15 +4,18 @@ import { connectDB } from "@/lib/db";
 import { User, ROLES } from "@/models/User";
 import { hashPassword } from "@/lib/auth/password";
 import { permissionsForRole } from "@/lib/auth/permissions";
+import { manageableRoles } from "@/lib/auth/hierarchy";
 import { toClientUser } from "@/lib/serializers";
-import { requireRole, handleApiError } from "@/lib/auth/guard";
+import { requireRole, handleApiError, ApiAuthError } from "@/lib/auth/guard";
 import { logAudit } from "@/lib/audit";
 
 export async function GET() {
   try {
-    await requireRole(["admin"]);
+    const session = await requireRole(["admin", "supervisor", "encargado"]);
     await connectDB();
-    const users = await User.find({}).sort({ createdAt: -1 }).lean();
+    const visibleRoles = manageableRoles(session.role);
+    const filter = session.role === "admin" ? {} : { role: { $in: visibleRoles } };
+    const users = await User.find(filter).sort({ createdAt: -1 }).lean();
     return NextResponse.json({ items: users.map(toClientUser) });
   } catch (err) {
     return handleApiError(err);
@@ -29,11 +32,15 @@ const UserInputSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireRole(["admin"]);
+    const session = await requireRole(["admin", "supervisor", "encargado"]);
     const body = await request.json().catch(() => null);
     const parsed = UserInputSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: "Datos de usuario inválidos" }, { status: 400 });
+    }
+
+    if (session.role !== "admin" && !manageableRoles(session.role).includes(parsed.data.role)) {
+      throw new ApiAuthError(403, "No podés crear usuarios con ese rol");
     }
 
     await connectDB();

@@ -7,12 +7,12 @@ import { DataTable, type Column } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/Badge";
 import type { ClientUser } from "@/lib/types";
 import type { Role } from "@/models/User";
-
-const ROLES: Role[] = ["admin", "supervisor", "encargado", "cliente"];
+import { manageableRoles, ROLE_LABELS } from "@/lib/auth/hierarchy";
 
 export function UsersManager() {
+  const [actor, setActor] = useState<ClientUser | null>(null);
   const [users, setUsers] = useState<ClientUser[]>([]);
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "encargado" as Role });
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "" as Role | "" });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -22,7 +22,20 @@ export function UsersManager() {
       .then((data) => setUsers(data.items ?? []));
   };
 
-  useEffect(load, []);
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => setActor(data.user ?? null));
+    load();
+  }, []);
+
+  if (!actor) return null;
+
+  const isAdmin = actor.role === "admin";
+  const creatableRoles = isAdmin
+    ? (["admin", "supervisor", "encargado", "operario", "cliente"] as Role[])
+    : manageableRoles(actor.role);
+  const defaultRole = form.role || creatableRoles[0] || "";
 
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
@@ -31,7 +44,7 @@ export function UsersManager() {
     const res = await fetch("/api/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, role: defaultRole }),
     });
     setSaving(false);
     if (!res.ok) {
@@ -39,7 +52,7 @@ export function UsersManager() {
       setError(data.error ?? "No se pudo crear el usuario");
       return;
     }
-    setForm({ name: "", email: "", password: "", role: "encargado" });
+    setForm({ name: "", email: "", password: "", role: "" });
     load();
   };
 
@@ -63,17 +76,17 @@ export function UsersManager() {
         </div>
       ),
     },
-    { key: "role", header: "Rol", render: (u) => <Badge>{u.role}</Badge> },
+    { key: "role", header: "Rol", render: (u) => <Badge>{ROLE_LABELS[u.role]}</Badge> },
     { key: "status", header: "Estado", render: (u) => <Badge tone={u.status}>{u.status}</Badge> },
     {
       key: "actions",
       header: "",
       render: (u) => (
         <div className="flex items-center gap-2 justify-end">
-          <Link href={`/dashboard/admin/usuarios/${u.id}/editar`} className="p-2 rounded-lg hover:bg-primary/10 text-primary">
+          <Link href={`/dashboard/${actor.role}/usuarios/${u.id}/editar`} className="p-2 rounded-lg hover:bg-primary/10 text-primary">
             <Pencil size={16} />
           </Link>
-          {u.status === "active" && (
+          {isAdmin && u.status === "active" && (
             <button onClick={() => handleSuspend(u.id)} className="p-2 rounded-lg hover:bg-danger/10 text-danger">
               <UserX size={16} />
             </button>
@@ -108,10 +121,10 @@ export function UsersManager() {
         </div>
         <div className="space-y-1 md:col-span-1">
           <label className="text-xs font-semibold">Rol</label>
-          <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })} className={`${inputClass} w-full`}>
-            {ROLES.map((r) => (
+          <select value={defaultRole} onChange={(e) => setForm({ ...form, role: e.target.value as Role })} className={`${inputClass} w-full`}>
+            {creatableRoles.map((r) => (
               <option key={r} value={r}>
-                {r}
+                {ROLE_LABELS[r]}
               </option>
             ))}
           </select>

@@ -5,7 +5,7 @@ import { FileSpreadsheet, FileText, Search, X } from "lucide-react";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { exportAuditToExcel, exportAuditToPDF, type AuditLogRow } from "@/lib/auditExport";
 
-const RESOURCE_TYPES = ["todos", "product", "category", "order", "user", "settings"];
+const RESOURCE_TYPES = ["todos", "product", "category", "order", "user", "user_edit_request", "settings"];
 
 const emptyFilters = { action: "", actor: "", resourceType: "todos", from: "", to: "" };
 

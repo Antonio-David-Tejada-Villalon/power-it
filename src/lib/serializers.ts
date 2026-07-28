@@ -1,4 +1,4 @@
-import type { ClientUser, Product, Category, Order } from "@/lib/types";
+import type { ClientUser, Product, Category, Order, UserEditRequest } from "@/lib/types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LeanDoc = any;
@@ -13,6 +13,43 @@ export function toClientUser(doc: LeanDoc): ClientUser {
     status: doc.status,
     phone: doc.phone,
     createdAt: doc.createdAt?.toISOString?.(),
+    canApproveOwnEdits: doc.canApproveOwnEdits ?? false,
+  };
+}
+
+function toUserRef(doc: LeanDoc): { id: string; name: string; email: string; role: string } {
+  return {
+    id: String(doc._id),
+    name: doc.name,
+    email: doc.email,
+    role: doc.role,
+  };
+}
+
+export function toClientUserEditRequest(
+  doc: LeanDoc,
+  opts: { canReview: boolean; isMine: boolean }
+): UserEditRequest {
+  return {
+    id: String(doc._id),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    targetUser: toUserRef(doc.targetUser) as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    requestedBy: toUserRef(doc.requestedBy) as any,
+    changes: {
+      name: doc.changes?.name,
+      role: doc.changes?.role,
+      status: doc.changes?.status,
+      password: Boolean(doc.changes?.passwordHash),
+    },
+    reason: doc.reason,
+    status: doc.status,
+    reviewedBy: doc.reviewedBy ? toUserRef(doc.reviewedBy) : null,
+    reviewReason: doc.reviewReason,
+    reviewedAt: doc.reviewedAt?.toISOString?.(),
+    canReview: opts.canReview,
+    isMine: opts.isMine,
+    createdAt: doc.createdAt?.toISOString?.() ?? new Date().toISOString(),
   };
 }
 

@@ -9,6 +9,29 @@ export interface ClientUser {
   status: "active" | "suspended";
   phone?: string;
   createdAt?: string;
+  canApproveOwnEdits?: boolean;
+}
+
+export interface UserEditRequestChanges {
+  name?: string;
+  role?: Role;
+  status?: "active" | "suspended";
+  password?: boolean;
+}
+
+export interface UserEditRequest {
+  id: string;
+  targetUser: { id: string; name: string; email: string; role: Role };
+  requestedBy: { id: string; name: string; email: string; role: Role };
+  changes: UserEditRequestChanges;
+  reason: string;
+  status: "pending" | "approved" | "rejected" | "deleted";
+  reviewedBy?: { id: string; name: string; email: string } | null;
+  reviewReason?: string;
+  reviewedAt?: string;
+  canReview: boolean;
+  isMine: boolean;
+  createdAt: string;
 }
 
 export interface Product {

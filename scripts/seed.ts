@@ -105,6 +105,7 @@ async function main() {
     { name: "Admin Power IT", email: seedAdminEmail, password: seedAdminPassword, role: "admin" as const },
     { name: "Supervisor Demo", email: "supervisor@powerit.local", password: "Supervisor#2026", role: "supervisor" as const },
     { name: "Encargado Demo", email: "encargado@powerit.local", password: "Encargado#2026", role: "encargado" as const },
+    { name: "Operario Demo", email: "operario@powerit.local", password: "Operario#2026", role: "operario" as const },
     { name: "Cliente Demo", email: "cliente@powerit.local", password: "Cliente#2026", role: "cliente" as const },
   ];
 

@@ -1,6 +1,6 @@
 import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
 
-export const ROLES = ["admin", "supervisor", "encargado", "cliente"] as const;
+export const ROLES = ["admin", "supervisor", "encargado", "operario", "cliente"] as const;
 export type Role = (typeof ROLES)[number];
 
 const AddressSchema = new Schema(
@@ -35,6 +35,9 @@ const UserSchema = new Schema(
     status: { type: String, enum: ["active", "suspended"], default: "active" },
     refreshTokenVersion: { type: Number, default: 0 },
     lastLoginAt: Date,
+    // Privilegio otorgable solo por admin: permite a un supervisor aprobar
+    // sus propias solicitudes de edición de perfil sin escalar al admin.
+    canApproveOwnEdits: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

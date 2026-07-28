@@ -19,7 +19,8 @@ function dashboardAreaRoles(pathname: string): string[] {
   if (pathname.startsWith("/dashboard/admin")) return ["admin"];
   if (pathname.startsWith("/dashboard/supervisor")) return ["admin", "supervisor"];
   if (pathname.startsWith("/dashboard/encargado")) return ["admin", "encargado"];
-  return ["admin", "supervisor", "encargado"];
+  if (pathname.startsWith("/dashboard/operario")) return ["admin", "operario"];
+  return ["admin", "supervisor", "encargado", "operario"];
 }
 
 export async function proxy(request: NextRequest) {

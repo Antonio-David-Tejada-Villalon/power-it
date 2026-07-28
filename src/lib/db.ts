@@ -12,6 +12,7 @@ import "@/models/Product";
 import "@/models/Order";
 import "@/models/AuditLog";
 import "@/models/Settings";
+import "@/models/UserEditRequest";
 
 interface MongooseCache {
   conn: typeof mongoose | null;
