@@ -34,6 +34,15 @@ Credenciales sembradas por `npm run seed`:
 
 `npx tsc --noEmit` y `npx eslint .` deben quedar sin errores antes de dar por terminado cualquier cambio (así se validó todo lo construido hasta ahora).
 
+## Local vs. producción: son bases de datos distintas
+
+`npm run dev` en tu máquina usa **su propia base local** (`mongodb-memory-server`, persistida en `.data/mongo`, nunca sale de tu disco). Vercel/producción usa **MongoDB Atlas**. Son dos copias de datos completamente independientes:
+
+- Editar un producto (o cualquier dato) en el admin de `localhost:3000` **no se refleja** en `power-it-one.vercel.app`, y viceversa.
+- Para cambiar algo en el sitio real hay que loguearse en el dashboard de la URL de producción, no en local.
+- `git push` / el deploy de Vercel **nunca tocan la base de datos**: `next build` (el comando de build que usa Vercel) solo compila código, no ejecuta `scripts/seed.ts` ni ninguna migración. Los únicos que escriben en Mongo son (a) el uso real del sitio (pedidos, ediciones desde el dashboard) y (b) correr `npm run seed` a mano.
+- `scripts/seed.ts` tiene una traba de seguridad: si `MONGODB_URI` apunta a algo que no sea local (ej. Atlas), se niega a correr salvo que se agregue `SEED_CONFIRM=yes` explícitamente — así un `npm run seed` corrido sin querer con la variable de Atlas todavía exportada no pisa el catálogo real por accidente.
+
 ## Estructura clave
 
 ```
