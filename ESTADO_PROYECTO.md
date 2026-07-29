@@ -20,6 +20,7 @@ Catálogo + panel administrativo de **Power IT** (tienda de tecnología). Arranc
 npm install
 npm run dev     # levanta Mongo local automático + Next en :3000
 npm run seed     # puebla categorías, ~21 productos y usuarios de prueba
+npm test         # corre la suite de Vitest (hierarchy.ts + inventory.ts)
 ```
 
 Credenciales sembradas por `npm run seed`:
@@ -80,8 +81,10 @@ Se hizo una auditoría integral (arquitectura/seguridad/datos/UX/infra/calidad/n
 - **Variables de entorno de producción fuera de "Preview"**: `MONGODB_URI`, `JWT_ACCESS_SECRET` y `JWT_REFRESH_SECRET` en Vercel quedaron con scope solo `Production` (antes también incluían `Preview`, lo que habría hecho que un futuro PR/preview deploy leyera y escribiera sobre la base de datos real). Cambio hecho a mano en el dashboard de Vercel, no es código.
 - **CI mínimo** (`.github/workflows/ci.yml`): corre `npx tsc --noEmit` y `npx eslint .` en cada push/PR a `main`. Antes nada impedía que un error de tipos o de lint llegara a producción; ahora al menos ese gate es automático, no depende de que alguien se acuerde de correrlo a mano.
 - **Contador atómico de pedidos** (`src/lib/orderNumber.ts` + `src/models/Counter.ts`): `nextOrderNumber()` ya no cuenta documentos (`Order.countDocuments()+1`, con condición de carrera bajo checkouts simultáneos); ahora usa un `$inc` atómico sobre un contador dedicado, con bootstrap automático que arranca la secuencia después del último pedido ya existente. Probado con 15 creaciones de pedido verdaderamente concurrentes (`Promise.all`): 15 números únicos, sin colisiones ni duplicados.
+- **Next.js actualizado 16.2.4 → 16.2.12**: `npm audit` (no se había corrido en la auditoría original) encontró varias vulnerabilidades altas en Next.js ya parcheadas en 16.2.12, incluyendo *bypasses de Middleware/Proxy* — el mecanismo exacto de `src/proxy.ts`. Actualizado y verificado (RBAC sigue devolviendo 401/307/200 como corresponde). `postcss`/`sharp` quedan como riesgo residual aceptado: vienen empaquetados dentro de Next.js mismo, y la única "corrección" que ofrece `npm audit --force` es degradar a Next 9 (rompería todo el proyecto) — se resuelven solos con futuros parches de Next, no hay acción propia posible hoy.
+- **Primeros tests automatizados** (Vitest, `npm test`): antes no existía ningún test en el proyecto. Se agregó cobertura de la lógica más crítica: `src/lib/auth/hierarchy.test.ts` (incluye como test de regresión permanente un bug real que se encontró y corrigió en esta misma sesión: el privilegio de autoaprobación de un supervisor no debe aplicar cuando edita a un subordinado) y `src/lib/inventory.test.ts` (reserva/liberación de stock, con un test de concurrencia real contra Mongo que confirma que nunca se vende de más). El paso `npm test` ya forma parte de `.github/workflows/ci.yml`.
 
-Hallazgos restantes (severidad media/baja/info) quedan pendientes de priorizar — ver el informe completo si se necesita retomarlos.
+Pendientes del plan original: `xlsx` desactualizado (SEC-06 — las versiones parchadas de SheetJS ya no se publican en npm, requiere sourcing externo o migrar a `exceljs`, decisión pendiente de confirmar), `dompurify` desactualizado (vía `jspdf`, moderado), secretos JWT sin fail-fast (SEC-04), accesibilidad (UX-01/02), y los de negocio (BIZ-01/02). Ver el informe completo si se necesita retomarlos.
 
 ## Qué está construido (funcional hoy)
 

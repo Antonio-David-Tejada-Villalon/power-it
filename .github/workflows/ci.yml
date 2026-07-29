@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  typecheck-and-lint:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -27,3 +27,6 @@ jobs:
 
       - name: Lint
         run: npx eslint .
+
+      - name: Tests
+        run: npm test
