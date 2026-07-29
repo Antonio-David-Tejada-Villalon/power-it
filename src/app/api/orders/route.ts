@@ -9,11 +9,7 @@ import { requirePermission, handleApiError } from "@/lib/auth/guard";
 import { hasPermission } from "@/lib/auth/permissions";
 import { logAudit } from "@/lib/audit";
 import { reserveStock } from "@/lib/inventory";
-
-async function nextOrderNumber(): Promise<string> {
-  const count = await Order.countDocuments();
-  return `PWR-${String(count + 1).padStart(6, "0")}`;
-}
+import { nextOrderNumber } from "@/lib/orderNumber";
 
 export async function GET(request: NextRequest) {
   try {
