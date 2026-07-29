@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { connectDB } from "@/lib/db";
 import { User } from "@/models/User";
-import { hashPassword } from "@/lib/auth/password";
+import { hashPassword, PasswordSchema } from "@/lib/auth/password";
 import { issueSessionCookies } from "@/lib/auth/session";
 import { permissionsForRole } from "@/lib/auth/permissions";
 import { toClientUser } from "@/lib/serializers";
@@ -12,7 +12,7 @@ import { linkGuestOrdersToUser } from "@/lib/orderLinking";
 const RegisterSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
-  password: z.string().min(8),
+  password: PasswordSchema,
   phone: z.string().optional(),
 });
 
@@ -21,7 +21,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => null);
     const parsed = RegisterSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: "Datos de registro inválidos" }, { status: 400 });
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Datos de registro inválidos" },
+        { status: 400 }
+      );
     }
 
     await connectDB();

@@ -1,18 +1,20 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import mongoose from "mongoose";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
 import { Product } from "@/models/Product";
 import { Category } from "@/models/Category";
 import { reserveStock, releaseStock } from "@/lib/inventory";
 
 // Instancia de Mongo propia y aislada para este archivo (no toca la del dev
 // server ni la de producción): se levanta una vez y se tira al terminar.
-let mongod: MongoMemoryServer;
+// Tiene que ser un replica set (no standalone) porque reserveStock/
+// releaseStock usan transacciones reales — un standalone no las soporta.
+let mongod: MongoMemoryReplSet;
 
 beforeAll(async () => {
-  mongod = await MongoMemoryServer.create();
-  await mongoose.connect(mongod.getUri());
-});
+  mongod = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
+  await mongoose.connect(mongod.getUri("inventory-test"));
+}, 60_000);
 
 afterAll(async () => {
   await mongoose.disconnect();

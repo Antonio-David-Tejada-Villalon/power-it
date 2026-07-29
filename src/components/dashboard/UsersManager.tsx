@@ -8,9 +8,10 @@ import { Badge } from "@/components/ui/Badge";
 import type { ClientUser } from "@/lib/types";
 import type { Role } from "@/models/User";
 import { manageableRoles, ROLE_LABELS } from "@/lib/auth/hierarchy";
+import { useSession } from "@/components/dashboard/SessionContext";
 
 export function UsersManager() {
-  const [actor, setActor] = useState<ClientUser | null>(null);
+  const actor = useSession();
   const [users, setUsers] = useState<ClientUser[]>([]);
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "" as Role | "" });
   const [error, setError] = useState<string | null>(null);
@@ -23,13 +24,8 @@ export function UsersManager() {
   };
 
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((res) => res.json())
-      .then((data) => setActor(data.user ?? null));
     load();
   }, []);
-
-  if (!actor) return null;
 
   const isAdmin = actor.role === "admin";
   const creatableRoles = isAdmin
@@ -118,6 +114,7 @@ export function UsersManager() {
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             className={`${inputClass} w-full`}
           />
+          <p className="text-xs text-foreground-secondary">Mínimo 8 caracteres, combinando letras y números.</p>
         </div>
         <div className="space-y-1 md:col-span-1">
           <label className="text-xs font-semibold">Rol</label>

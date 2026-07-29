@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Product } from "@/models/Product";
 
 export interface StockItem {
@@ -7,37 +8,56 @@ export interface StockItem {
 
 export type ReserveResult = { ok: true } | { ok: false; productId: string };
 
+class InsufficientStockError extends Error {
+  constructor(public readonly productId: string) {
+    super(`Stock insuficiente para el producto ${productId}`);
+  }
+}
+
 /**
- * Descuenta stock por item de forma atómica (guard $gte evita negativos).
- * Si algún item falla por stock insuficiente, revierte los ya descontados
- * en esta misma llamada (no hay transacciones: mongodb-memory-server corre
- * standalone, sin replica set).
+ * Descuenta stock por item dentro de una transacción real (guard $gte evita
+ * negativos). Si algún item falla por stock insuficiente, toda la
+ * transacción se aborta y ningún item queda afectado — Atlas despliega
+ * siempre como replica set (incluso el tier M0 gratuito), así que las
+ * transacciones ACID están disponibles tanto en producción como en local
+ * (ver src/lib/db.ts, que levanta mongodb-memory-server como replica set).
  */
 export async function reserveStock(items: StockItem[]): Promise<ReserveResult> {
-  const decremented: StockItem[] = [];
-
-  for (const item of items) {
-    const updated = await Product.findOneAndUpdate(
-      { _id: item.product, stock: { $gte: item.quantity } },
-      { $inc: { stock: -item.quantity } }
-    );
-
-    if (!updated) {
-      for (const done of decremented) {
-        await Product.findByIdAndUpdate(done.product, { $inc: { stock: done.quantity } });
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      for (const item of items) {
+        const updated = await Product.findOneAndUpdate(
+          { _id: item.product, stock: { $gte: item.quantity } },
+          { $inc: { stock: -item.quantity } },
+          { session }
+        );
+        if (!updated) throw new InsufficientStockError(item.product);
       }
-      return { ok: false, productId: item.product };
+    });
+    return { ok: true };
+  } catch (err) {
+    if (err instanceof InsufficientStockError) {
+      return { ok: false, productId: err.productId };
     }
-
-    decremented.push(item);
+    throw err;
+  } finally {
+    await session.endSession();
   }
-
-  return { ok: true };
 }
 
 /** Devuelve stock reservado (al cancelar o eliminar un pedido activo). */
 export async function releaseStock(items: StockItem[]): Promise<void> {
-  await Promise.all(
-    items.map((item) => Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } }))
-  );
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      await Promise.all(
+        items.map((item) =>
+          Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } }, { session })
+        )
+      );
+    });
+  } finally {
+    await session.endSession();
+  }
 }

@@ -43,10 +43,31 @@ export default function CatalogPage() {
   const { cart, addToCart, removeFromCart, updateQuantity, clearCart, isSidebarOpen, setIsSidebarOpen, syncWithAccount } =
     useCart();
 
+  // El buscador/filtros del catálogo trabajan en memoria sobre el listado
+  // completo (specs disponibles, rango de precio, etc.), así que acá se trae
+  // el catálogo entero paginando contra el servidor en vez de cortar en el
+  // límite de 100 de la primera página — si no, un catálogo que creciera más
+  // allá de eso perdería productos en silencio.
+  const MAX_CATALOG_PAGES = 20;
   const loadProducts = () => {
-    fetch("/api/products?limit=100")
+    fetch("/api/products?limit=100&page=1")
       .then((res) => res.json())
-      .then((data) => setProducts(data.items ?? []));
+      .then((first) => {
+        const items: Product[] = first.items ?? [];
+        const totalPages = Math.min(first.pages ?? 1, MAX_CATALOG_PAGES);
+        if (totalPages <= 1) {
+          setProducts(items);
+          return;
+        }
+        Promise.all(
+          Array.from({ length: totalPages - 1 }, (_, i) =>
+            fetch(`/api/products?limit=100&page=${i + 2}`).then((res) => res.json())
+          )
+        ).then((rest) => {
+          for (const page of rest) items.push(...(page.items ?? []));
+          setProducts(items);
+        });
+      });
   };
 
   useEffect(() => {

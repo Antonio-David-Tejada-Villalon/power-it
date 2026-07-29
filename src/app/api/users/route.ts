@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { connectDB } from "@/lib/db";
 import { User, ROLES } from "@/models/User";
-import { hashPassword } from "@/lib/auth/password";
+import { hashPassword, PasswordSchema } from "@/lib/auth/password";
 import { permissionsForRole } from "@/lib/auth/permissions";
 import { manageableRoles } from "@/lib/auth/hierarchy";
 import { toClientUser } from "@/lib/serializers";
@@ -25,7 +25,7 @@ export async function GET() {
 const UserInputSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
-  password: z.string().min(8),
+  password: PasswordSchema,
   role: z.enum(ROLES),
   phone: z.string().optional(),
 });
@@ -36,7 +36,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => null);
     const parsed = UserInputSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: "Datos de usuario inválidos" }, { status: 400 });
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Datos de usuario inválidos" },
+        { status: 400 }
+      );
     }
 
     if (session.role !== "admin" && !manageableRoles(session.role).includes(parsed.data.role)) {

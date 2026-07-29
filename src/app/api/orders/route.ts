@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import type { QueryFilter } from "mongoose";
 import { connectDB } from "@/lib/db";
-import { Order } from "@/models/Order";
+import { Order, type OrderDoc } from "@/models/Order";
 import { Product } from "@/models/Product";
 import { toClientOrder } from "@/lib/serializers";
 import { getSessionUser } from "@/lib/auth/session";
@@ -28,9 +29,9 @@ export async function GET(request: NextRequest) {
     const own = request.nextUrl.searchParams.get("own") === "true";
     const status = request.nextUrl.searchParams.get("status");
 
-    const query: Record<string, unknown> = {};
+    const query: QueryFilter<OrderDoc> = {};
     if (own) query["customer.user"] = session.sub;
-    if (status) query.status = status;
+    if (status) query.status = status as OrderDoc["status"];
     if (session.role === "encargado" && !own) query.status = { $ne: "cancelado" };
 
     const orders = await Order.find(query).sort({ createdAt: -1 }).limit(200).lean();

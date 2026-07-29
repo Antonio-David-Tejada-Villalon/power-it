@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import type { QueryFilter } from "mongoose";
 import { connectDB } from "@/lib/db";
-import { Product } from "@/models/Product";
+import { Product, type ProductDoc } from "@/models/Product";
 import { toClientProduct } from "@/lib/serializers";
 import { requirePermission, handleApiError } from "@/lib/auth/guard";
 import { logAudit } from "@/lib/audit";
@@ -23,10 +24,10 @@ export async function GET(request: NextRequest) {
   const page = Math.max(1, Number(searchParams.get("page") ?? 1));
   const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") ?? 100)));
 
-  const query: Record<string, unknown> = {};
+  const query: QueryFilter<ProductDoc> = {};
   if (search) query.$text = { $search: search };
   if (category) query.category = category;
-  if (status) query.status = status;
+  if (status) query.status = status as ProductDoc["status"];
   if (featured) query.featured = featured === "true";
 
   const [items, total] = await Promise.all([

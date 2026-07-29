@@ -1,32 +1,19 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
-import type { ClientUser } from "@/lib/types";
 import { ROLE_LABELS } from "@/lib/auth/hierarchy";
+import { useSession } from "@/components/dashboard/SessionContext";
 
 export function ProfileForm() {
-  const [me, setMe] = useState<ClientUser | null>(null);
-  const [name, setName] = useState("");
+  const me = useSession();
+  const [name, setName] = useState(me.name);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.user) {
-          setMe(data.user);
-          setName(data.user.name);
-        }
-      });
-  }, []);
-
-  if (!me) return null;
 
   const isAdmin = me.role === "admin";
 
@@ -62,8 +49,6 @@ export function ProfileForm() {
       return;
     }
 
-    const data = await res.json();
-    setMe(data.user);
     setPassword("");
   };
 
@@ -129,6 +114,7 @@ export function ProfileForm() {
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
+            <p className="text-xs text-foreground-secondary">Mínimo 8 caracteres, combinando letras y números.</p>
           </div>
           {!isAdmin && (
             <div className="space-y-1">

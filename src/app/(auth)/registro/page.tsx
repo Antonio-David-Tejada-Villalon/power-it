@@ -77,6 +77,7 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3 bg-black/5 dark:bg-white/5 border border-transparent focus:border-primary rounded-xl outline-none transition-all text-sm"
             />
+            <p className="text-xs text-foreground-secondary">Mínimo 8 caracteres, combinando letras y números.</p>
           </div>
           <button
             type="submit"

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { connectDB } from "@/lib/db";
 import { User, ROLES } from "@/models/User";
 import { UserEditRequest } from "@/models/UserEditRequest";
-import { hashPassword } from "@/lib/auth/password";
+import { hashPassword, PasswordSchema } from "@/lib/auth/password";
 import { permissionsForRole } from "@/lib/auth/permissions";
 import { manageableRoles } from "@/lib/auth/hierarchy";
 import { toClientUser, toClientUserEditRequest } from "@/lib/serializers";
@@ -18,7 +18,7 @@ const UserUpdateSchema = z.object({
   permissions: z.array(z.string()).optional(),
   phone: z.string().optional(),
   status: z.enum(["active", "suspended"]).optional(),
-  password: z.string().min(8).optional(),
+  password: PasswordSchema.optional(),
   canApproveOwnEdits: z.boolean().optional(),
   reason: z.string().min(3).max(500).optional(),
 });
@@ -50,7 +50,10 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const body = await request.json().catch(() => null);
     const parsed = UserUpdateSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: "Datos de usuario inválidos" }, { status: 400 });
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Datos de usuario inválidos" },
+        { status: 400 }
+      );
     }
 
     await connectDB();

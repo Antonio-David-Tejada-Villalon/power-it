@@ -4,12 +4,12 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import type { Role } from "@/models/User";
-import type { ClientUser } from "@/lib/types";
 import { manageableRoles, ROLE_LABELS } from "@/lib/auth/hierarchy";
+import { useSession } from "@/components/dashboard/SessionContext";
 
 export function UserEditForm({ userId }: { userId: string }) {
   const router = useRouter();
-  const [actor, setActor] = useState<ClientUser | null>(null);
+  const actor = useSession();
   const [name, setName] = useState("");
   const [role, setRole] = useState<Role>("cliente");
   const [status, setStatus] = useState<"active" | "suspended">("active");
@@ -20,12 +20,6 @@ export function UserEditForm({ userId }: { userId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((res) => res.json())
-      .then((data) => setActor(data.user ?? null));
-  }, []);
 
   useEffect(() => {
     fetch(`/api/users/${userId}`)
@@ -39,8 +33,6 @@ export function UserEditForm({ userId }: { userId: string }) {
         }
       });
   }, [userId]);
-
-  if (!actor) return null;
 
   const isAdmin = actor.role === "admin";
   const isSelf = actor.id === userId;
@@ -165,6 +157,7 @@ export function UserEditForm({ userId }: { userId: string }) {
             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
+        <p className="text-xs text-foreground-secondary">Mínimo 8 caracteres, combinando letras y números.</p>
       </div>
       {isAdmin && role === "supervisor" && (
         <label className="flex items-start gap-3 text-sm cursor-pointer">

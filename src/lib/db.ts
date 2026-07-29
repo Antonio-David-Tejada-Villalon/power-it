@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import fs from "node:fs";
 import path from "node:path";
-import type { MongoMemoryServer } from "mongodb-memory-server";
+import type { MongoMemoryReplSet } from "mongodb-memory-server";
 
 // Registra todos los modelos aunque la ruta que llama a connectDB() solo
 // importe uno de ellos directamente (necesario para que populate() funcione
@@ -21,7 +21,7 @@ import "@/models/Cart";
 interface MongooseCache {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
-  memoryServer: MongoMemoryServer | null;
+  memoryServer: MongoMemoryReplSet | null;
 }
 
 declare global {
@@ -40,23 +40,23 @@ async function resolveConnectionUri(): Promise<string> {
   if (configuredUri) return configuredUri;
 
   // Sin MONGODB_URI (aun no hay Atlas): levantamos un MongoDB real en local
-  // via mongodb-memory-server, con dbPath persistente para no perder datos
-  // entre reinicios de `npm run dev`.
-  const { MongoMemoryServer } = await import("mongodb-memory-server");
+  // vía mongodb-memory-server, como replica set de un solo nodo (con dbPath
+  // persistente para no perder datos entre reinicios de `npm run dev`).
+  // Necesita ser replica set (no standalone) porque Atlas SIEMPRE despliega
+  // como replica set —incluso el tier M0 gratuito— y las transacciones
+  // multi-documento de src/lib/inventory.ts solo funcionan contra uno.
+  const { MongoMemoryReplSet } = await import("mongodb-memory-server");
   const dbPath = path.join(process.cwd(), ".data", "mongo");
   fs.mkdirSync(dbPath, { recursive: true });
 
-  const mongod = await MongoMemoryServer.create({
-    instance: {
-      dbPath,
-      storageEngine: "wiredTiger",
-      port: 27117,
-    },
+  const replSet = await MongoMemoryReplSet.create({
+    instanceOpts: [{ dbPath, port: 27117 }],
+    replSet: { count: 1, storageEngine: "wiredTiger" },
   });
-  cache.memoryServer = mongod;
+  cache.memoryServer = replSet;
 
-  const uri = `${mongod.getUri()}powerit`;
-  console.log(`[db] MongoDB local (mongodb-memory-server) listo en ${uri}`);
+  const uri = replSet.getUri("powerit");
+  console.log(`[db] MongoDB local (replica set de 1 nodo, mongodb-memory-server) listo en ${uri}`);
   return uri;
 }
 
