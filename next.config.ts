@@ -7,11 +7,16 @@ const isDev = process.env.NODE_ENV === "development";
 // tamaño actual del sitio, 'unsafe-inline' es el trade-off correcto — sigue
 // bloqueando scripts/estilos inyectados desde un origen externo, que es el
 // vector real que interesa cortar.
+// img-src abierto a cualquier https: los admins pueden cargar la imagen de un
+// producto desde cualquier URL. Esas imágenes se renderizan con next/image en
+// modo "unoptimized" (el servidor nunca las descarga ni las procesa), así que
+// esto no reabre el riesgo de SSRF/DoS del optimizador de imágenes de Next
+// contra un host arbitrario.
 const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""};
   style-src 'self' 'unsafe-inline';
-  img-src 'self' blob: data: https://images.unsplash.com;
+  img-src 'self' blob: data: https:;
   font-src 'self';
   connect-src 'self';
   object-src 'none';

@@ -6,9 +6,8 @@ import { Trash2, PackageCheck } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { STATUSES, STATUS_LABELS } from "@/components/dashboard/OrdersTable";
+import { formatPrice } from "@/lib/currency";
 import type { Order } from "@/lib/types";
-
-const currency = new Intl.NumberFormat("es", { style: "currency", currency: "USD" });
 
 interface OrderDetailProps {
   orderId: string;
@@ -131,7 +130,8 @@ export function OrderDetail({ orderId, canDelete, listPath = "/dashboard/admin/p
                 <p className="text-foreground-secondary text-xs">{item.sku}</p>
               </div>
               <p>
-                {item.quantity} × {currency.format(item.price)} = <strong>{currency.format(item.subtotal)}</strong>
+                {item.quantity} × {formatPrice(item.price, order.currency)} ={" "}
+                <strong>{formatPrice(item.subtotal, order.currency)}</strong>
               </p>
             </div>
           ))}
@@ -139,7 +139,7 @@ export function OrderDetail({ orderId, canDelete, listPath = "/dashboard/admin/p
 
         <div className="flex items-center justify-between pt-4 border-t border-[color:var(--glass-border)]">
           <span className="font-semibold">Total</span>
-          <span className="font-heading text-2xl font-bold text-primary">{currency.format(order.total)}</span>
+          <span className="font-heading text-2xl font-bold text-primary">{formatPrice(order.total, order.currency)}</span>
         </div>
 
         {order.notes && (

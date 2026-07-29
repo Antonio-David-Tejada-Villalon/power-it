@@ -1,4 +1,5 @@
 import { Schema, model, models, type InferSchemaType, type Model, type Types } from "mongoose";
+import { CURRENCIES } from "@/lib/currency";
 
 const ProductSchema = new Schema(
   {
@@ -8,6 +9,10 @@ const ProductSchema = new Schema(
     slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
     description: { type: String, default: "" },
     price: { type: Number, required: true, min: 0 },
+    // Moneda en la que se cargó `price` (y `compareAtPrice`). "USD" por
+    // default para no reinterpretar silenciosamente los productos ya
+    // existentes, cargados antes de que este campo existiera.
+    currency: { type: String, enum: CURRENCIES, default: "USD" },
     compareAtPrice: { type: Number, min: 0 },
     stock: { type: Number, required: true, default: 0, min: 0 },
     images: { type: [String], default: [] },

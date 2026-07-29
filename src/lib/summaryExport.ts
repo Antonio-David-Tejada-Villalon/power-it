@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { saveFile } from "@/lib/exportUtils";
+import { formatPrice } from "@/lib/currency";
 
 export interface SummaryKpi {
   label: string;
@@ -19,12 +20,12 @@ export interface SummaryTopProduct {
   revenue: number;
 }
 
-const currency = new Intl.NumberFormat("es", { style: "currency", currency: "USD" });
-
 const KPI_EXPLANATIONS: Record<string, string> = {
-  "Ventas del período": "Suma del total de los pedidos no cancelados creados dentro del rango de fechas seleccionado.",
+  "Ventas del período (USD)":
+    "Suma del total de los pedidos no cancelados creados dentro del rango de fechas seleccionado. Los pedidos en otras monedas se convierten a USD con el tipo de cambio vigente al generar el reporte.",
   "Pedidos del período": "Cantidad de pedidos no cancelados creados dentro del rango de fechas seleccionado.",
-  "Egresos (cancelados)": "Valor total de los pedidos cancelados dentro del rango de fechas seleccionado (dinero reservado que no se concretó).",
+  "Egresos (cancelados, USD)":
+    "Valor total de los pedidos cancelados dentro del rango de fechas seleccionado (dinero reservado que no se concretó), convertido a USD.",
   "Pedidos cancelados": "Cantidad de pedidos cancelados dentro del rango de fechas seleccionado.",
   "Productos sin stock": "Cantidad de productos con stock en 0 al momento de generar este reporte (no depende del rango de fechas).",
   "Usuarios activos": "Cantidad de usuarios del equipo con estado activo al momento de generar este reporte.",
@@ -33,7 +34,7 @@ const KPI_EXPLANATIONS: Record<string, string> = {
 };
 
 function formatKpiValue(kpi: SummaryKpi): string {
-  return kpi.format === "currency" ? currency.format(kpi.value) : String(kpi.value);
+  return kpi.format === "currency" ? formatPrice(kpi.value, "USD") : String(kpi.value);
 }
 
 export async function exportSummaryToExcel(
@@ -112,7 +113,7 @@ export async function exportSummaryToPDF(
         p.name,
         p.sku,
         String(p.unitsSold),
-        currency.format(p.revenue),
+        formatPrice(p.revenue, "USD"),
       ]),
       startY: afterKpisY + 6,
       theme: "grid",

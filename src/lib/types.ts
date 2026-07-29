@@ -1,4 +1,5 @@
 import type { Role } from "@/models/User";
+import type { Currency } from "@/lib/currency";
 
 export interface ClientUser {
   id: string;
@@ -42,6 +43,7 @@ export interface Product {
   slug: string;
   description: string;
   price: number;
+  currency: Currency;
   compareAtPrice?: number;
   stock: number;
   images: string[];
@@ -75,6 +77,7 @@ export interface Order {
   orderNumber: string;
   customer: { user?: string | null; name: string; email: string; phone?: string };
   items: OrderItem[];
+  currency: Currency;
   subtotal: number;
   total: number;
   status: string;

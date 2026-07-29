@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { CartItem } from "@/hooks/useCart";
+import { formatPrice, type Currency } from "@/lib/currency";
 
 declare global {
   interface Window {
@@ -11,7 +12,11 @@ declare global {
   }
 }
 
-const currency = new Intl.NumberFormat("es", { style: "currency", currency: "USD" });
+// El carrito nunca mezcla monedas (useCart lo garantiza al agregar), así que
+// alcanza con la moneda del primer item.
+function cartCurrency(items: CartItem[]): Currency {
+  return items[0]?.currency ?? "USD";
+}
 
 export const exportToExcel = async (items: CartItem[], fileName: string) => {
   const data = items.map((item) => ({
@@ -35,6 +40,7 @@ export const exportToExcel = async (items: CartItem[], fileName: string) => {
 
 export const exportToPDF = async (items: CartItem[], fileName: string, contactEmail: string) => {
   const doc = new jsPDF();
+  const currencyCode = cartCurrency(items);
 
   const tableColumn = ["Cant", "SKU", "Producto", "Marca", "Precio", "Subtotal"];
   const tableRows = items.map((item) => [
@@ -42,8 +48,8 @@ export const exportToPDF = async (items: CartItem[], fileName: string, contactEm
     item.sku,
     item.name,
     item.brand ?? "",
-    currency.format(item.price),
-    currency.format(item.price * item.cantidad),
+    formatPrice(item.price, currencyCode),
+    formatPrice(item.price * item.cantidad, currencyCode),
   ]);
 
   doc.setFontSize(18);
@@ -67,7 +73,7 @@ export const exportToPDF = async (items: CartItem[], fileName: string, contactEm
   const finalY = (doc as any).lastAutoTable.finalY + 10;
   doc.setFontSize(12);
   doc.setTextColor(0);
-  doc.text(`Total: ${currency.format(total)}`, 14, finalY);
+  doc.text(`Total: ${formatPrice(total, currencyCode)}`, 14, finalY);
   doc.setFontSize(10);
   doc.text(`Solicitud de presupuesto para ${contactEmail}`, 14, finalY + 8);
 

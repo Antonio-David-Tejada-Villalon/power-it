@@ -6,9 +6,8 @@ import { ArrowLeft } from "lucide-react";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/Badge";
 import { Logo } from "@/components/ui/Logo";
+import { formatPrice } from "@/lib/currency";
 import type { Order } from "@/lib/types";
-
-const currency = new Intl.NumberFormat("es", { style: "currency", currency: "USD" });
 
 export default function MyOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -22,7 +21,7 @@ export default function MyOrdersPage() {
   const columns: Column<Order>[] = [
     { key: "orderNumber", header: "Pedido", render: (o) => <span className="font-semibold">{o.orderNumber}</span> },
     { key: "items", header: "Items", render: (o) => `${o.items.length} producto(s)` },
-    { key: "total", header: "Total", render: (o) => currency.format(o.total) },
+    { key: "total", header: "Total", render: (o) => formatPrice(o.total, o.currency) },
     { key: "status", header: "Estado", render: (o) => <Badge tone={o.status}>{o.status}</Badge> },
     { key: "date", header: "Fecha", render: (o) => new Date(o.createdAt).toLocaleDateString("es") },
   ];

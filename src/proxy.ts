@@ -12,6 +12,7 @@ function isPublicApi(pathname: string, method: string): boolean {
   if (/^\/api\/categories\/[^/]+$/.test(pathname) && method === "GET") return true;
   if (pathname === "/api/orders" && method === "POST") return true;
   if (pathname === "/api/settings" && method === "GET") return true;
+  if (pathname === "/api/currency" && method === "GET") return true;
   return false;
 }
 

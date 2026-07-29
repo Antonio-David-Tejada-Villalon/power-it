@@ -5,20 +5,33 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { Info, Plus, Minus, ShoppingCart, PackageX } from "lucide-react";
 import type { Product } from "@/lib/types";
+import { formatPrice, convertAmount, type Currency, type RateTable } from "@/lib/currency";
 
 interface ProductCardProps {
   product: Product;
-  onAdd: (product: Product, cantidad: number) => void;
+  onAdd: (product: Product, cantidad: number) => { ok: true } | { ok: false; error: string };
   onShowDetails: (product: Product) => void;
+  visitorCurrency?: Currency;
+  rates?: RateTable;
 }
 
-const currency = new Intl.NumberFormat("es", { style: "currency", currency: "USD" });
-
-export const ProductCard = ({ product, onAdd, onShowDetails }: ProductCardProps) => {
+export const ProductCard = ({ product, onAdd, onShowDetails, visitorCurrency, rates }: ProductCardProps) => {
   const [cantidad, setCantidad] = useState(1);
+  const [cartError, setCartError] = useState<string | null>(null);
   const outOfStock = product.status === "agotado" || product.stock === 0;
   const imageUrl = product.images[0] ?? "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1000&auto=format&fit=crop";
   const categoryName = typeof product.category === "object" ? product.category.name : undefined;
+
+  const showConverted = visitorCurrency && rates && visitorCurrency !== product.currency;
+  const convertedPrice = showConverted ? convertAmount(product.price, product.currency, visitorCurrency, rates) : null;
+
+  const handleAdd = () => {
+    const result = onAdd(product, cantidad);
+    if (!result.ok) {
+      setCartError(result.error);
+      setTimeout(() => setCartError(null), 5000);
+    }
+  };
 
   return (
     <motion.div
@@ -34,6 +47,7 @@ export const ProductCard = ({ product, onAdd, onShowDetails }: ProductCardProps)
           src={imageUrl}
           alt={product.name}
           fill
+          unoptimized
           className={`object-cover transition-transform duration-500 group-hover:scale-105 ${
             outOfStock ? "grayscale opacity-40" : ""
           }`}
@@ -77,7 +91,18 @@ export const ProductCard = ({ product, onAdd, onShowDetails }: ProductCardProps)
           <p className="text-sm text-foreground-secondary">{product.brand ?? product.sku}</p>
         </div>
 
-        <p className="text-xl font-bold font-heading">{currency.format(product.price)}</p>
+        <div>
+          <p className="text-xl font-bold font-heading">
+            {formatPrice(convertedPrice ?? product.price, showConverted ? visitorCurrency! : product.currency)}
+          </p>
+          {showConverted && (
+            <p className="text-xs text-foreground-secondary">
+              ≈ {formatPrice(product.price, product.currency)} · precio de referencia, puede variar
+            </p>
+          )}
+        </div>
+
+        {cartError && <p className="text-xs text-danger leading-snug">{cartError}</p>}
 
         <div className="flex items-center justify-between gap-2 pt-2">
           <div
@@ -105,7 +130,7 @@ export const ProductCard = ({ product, onAdd, onShowDetails }: ProductCardProps)
           </div>
 
           <button
-            onClick={() => onAdd(product, cantidad)}
+            onClick={handleAdd}
             disabled={outOfStock}
             className="flex-1 bg-primary text-white py-2 rounded-full text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
           >

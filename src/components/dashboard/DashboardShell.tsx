@@ -23,7 +23,7 @@ export function DashboardShell({ user, children }: { user: ClientUser; children:
 
       <div className="flex-1 min-w-0 flex flex-col">
         <Topbar user={user} onOpenMenu={() => setDrawerOpen(true)} />
-        <main className="flex-1 p-6 md:p-10 space-y-8">{children}</main>
+        <main id="main-content" className="flex-1 p-6 md:p-10 space-y-8">{children}</main>
       </div>
     </div>
   );

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Order } from "@/models/Order";
+import { Product } from "@/models/Product";
 import { requireRole, handleApiError } from "@/lib/auth/guard";
+import { getExchangeRates } from "@/lib/exchangeRates";
+import { convertAmount, isCurrency, type Currency } from "@/lib/currency";
 
 function startOfMonth(): Date {
   const d = new Date();
@@ -22,37 +25,56 @@ export async function GET(request: NextRequest) {
     const to = toParam ? new Date(`${toParam}T23:59:59.999Z`) : new Date();
     const limit = Math.min(50, Number(params.get("limit") ?? 10));
 
+    // Se agrupa por (producto, moneda) porque un mismo producto puede
+    // haberse vendido en más de una moneda si cambió su precio/moneda entre
+    // pedidos; cada bucket de moneda se convierte a USD antes de sumarlos.
     const results = await Order.aggregate([
       { $match: { createdAt: { $gte: from, $lte: to }, status: { $ne: "cancelado" } } },
       { $unwind: "$items" },
       {
         $group: {
-          _id: "$items.product",
+          _id: { product: "$items.product", currency: "$currency" },
           sku: { $first: "$items.sku" },
           name: { $first: "$items.name" },
           unitsSold: { $sum: "$items.quantity" },
           revenue: { $sum: "$items.subtotal" },
         },
       },
-      { $sort: { unitsSold: -1 } },
-      { $limit: limit },
-      {
-        $lookup: {
-          from: "products",
-          localField: "_id",
-          foreignField: "_id",
-          as: "product",
-        },
-      },
     ]);
 
-    const items = results.map((r) => ({
-      productId: String(r._id),
-      sku: r.sku,
-      name: r.name,
-      unitsSold: r.unitsSold,
-      revenue: r.revenue,
-      image: r.product?.[0]?.images?.[0] ?? null,
+    const rates = await getExchangeRates();
+    const byProduct = new Map<string, { sku: string; name: string; unitsSold: number; revenueUSD: number }>();
+
+    for (const r of results) {
+      const productId = String(r._id.product);
+      const currency: Currency = isCurrency(r._id.currency) ? r._id.currency : "USD";
+      const revenueUSD = convertAmount(r.revenue, currency, "USD", rates);
+
+      const existing = byProduct.get(productId);
+      if (existing) {
+        existing.unitsSold += r.unitsSold;
+        existing.revenueUSD += revenueUSD;
+      } else {
+        byProduct.set(productId, { sku: r.sku, name: r.name, unitsSold: r.unitsSold, revenueUSD });
+      }
+    }
+
+    const top = Array.from(byProduct.entries())
+      .sort((a, b) => b[1].unitsSold - a[1].unitsSold)
+      .slice(0, limit);
+
+    const products = await Product.find({ _id: { $in: top.map(([id]) => id) } })
+      .select("images")
+      .lean();
+    const imageById = new Map(products.map((p) => [String(p._id), p.images?.[0] ?? null]));
+
+    const items = top.map(([productId, data]) => ({
+      productId,
+      sku: data.sku,
+      name: data.name,
+      unitsSold: data.unitsSold,
+      revenue: data.revenueUSD,
+      image: imageById.get(productId) ?? null,
     }));
 
     return NextResponse.json({ items, range: { from: from.toISOString(), to: to.toISOString() } });

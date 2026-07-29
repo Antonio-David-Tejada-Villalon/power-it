@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, ShoppingBag, Trash2, Plus, Minus, ArrowRight } from "lucide-react";
 import Image from "next/image";
 import type { CartItem } from "@/hooks/useCart";
+import { formatPrice } from "@/lib/currency";
 
 interface CartSidebarProps {
   isOpen: boolean;
@@ -15,8 +16,6 @@ interface CartSidebarProps {
   onCheckout: () => void;
 }
 
-const currency = new Intl.NumberFormat("es", { style: "currency", currency: "USD" });
-
 export const CartSidebar = ({
   isOpen,
   onClose,
@@ -26,6 +25,8 @@ export const CartSidebar = ({
   onCheckout,
 }: CartSidebarProps) => {
   const total = items.reduce((acc, item) => acc + item.price * item.cantidad, 0);
+  // Todos los items del carrito comparten moneda (useCart lo garantiza al agregar).
+  const cartCurrency = items[0]?.currency ?? "USD";
 
   return (
     <AnimatePresence>
@@ -80,13 +81,14 @@ export const CartSidebar = ({
                         src={item.images[0] ?? "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=400&auto=format&fit=crop"}
                         alt={item.name}
                         fill
+                        unoptimized
                         className="object-cover"
                       />
                     </div>
                     <div className="flex-1 min-w-0 flex flex-col justify-between">
                       <div>
                         <h4 className="font-semibold text-sm line-clamp-2">{item.name}</h4>
-                        <p className="text-xs text-foreground-secondary">{currency.format(item.price)}</p>
+                        <p className="text-xs text-foreground-secondary">{formatPrice(item.price, item.currency)}</p>
                       </div>
 
                       <div className="flex items-center justify-between">
@@ -99,7 +101,7 @@ export const CartSidebar = ({
                             <Plus size={12} />
                           </button>
                         </div>
-                        <span className="text-xs font-bold">{currency.format(item.price * item.cantidad)}</span>
+                        <span className="text-xs font-bold">{formatPrice(item.price * item.cantidad, item.currency)}</span>
                       </div>
                     </div>
 
@@ -118,7 +120,7 @@ export const CartSidebar = ({
               <div className="p-6 glass-dark rounded-t-[2rem] space-y-4">
                 <div className="flex items-center justify-between text-lg font-bold">
                   <span>Total</span>
-                  <span className="text-primary">{currency.format(total)}</span>
+                  <span className="text-primary">{formatPrice(total, cartCurrency)}</span>
                 </div>
                 <button
                   onClick={onCheckout}

@@ -5,6 +5,13 @@ import { Product } from "@/models/Product";
 import { toClientProduct } from "@/lib/serializers";
 import { requirePermission, handleApiError } from "@/lib/auth/guard";
 import { logAudit } from "@/lib/audit";
+import { CURRENCIES } from "@/lib/currency";
+import { isImageUrl } from "@/lib/utils";
+
+const ImageUrlSchema = z
+  .string()
+  .url()
+  .refine(isImageUrl, "La URL debe ser https y apuntar a una imagen (jpg, png, gif, webp, avif o svg)");
 
 export async function GET(request: NextRequest) {
   await connectDB();
@@ -50,9 +57,10 @@ const ProductInputSchema = z.object({
   slug: z.string().min(1),
   description: z.string().optional().default(""),
   price: z.number().min(0),
+  currency: z.enum(CURRENCIES).default("USD"),
   compareAtPrice: z.number().min(0).optional(),
   stock: z.number().min(0).default(0),
-  images: z.array(z.string()).default([]),
+  images: z.array(ImageUrlSchema).default([]),
   category: z.string().min(1),
   brand: z.string().optional(),
   specs: z.record(z.string(), z.string()).default({}),

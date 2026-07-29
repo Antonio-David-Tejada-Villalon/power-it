@@ -7,6 +7,7 @@ import { DataTable, type Column } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/Badge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { cn } from "@/lib/utils";
+import { formatPrice } from "@/lib/currency";
 import type { Order } from "@/lib/types";
 
 interface OrdersTableProps {
@@ -25,8 +26,6 @@ export const STATUS_LABELS: Record<string, string> = {
   completado: "Completado",
   cancelado: "Cancelado",
 };
-
-const currency = new Intl.NumberFormat("es", { style: "currency", currency: "USD" });
 
 type PendingAction =
   | { type: "status"; orderId: string; from: string; to: string }
@@ -195,7 +194,7 @@ export function OrdersTable({ canUpdateStatus, canDelete, detailPathPrefix = "/d
       ),
     },
     { key: "items", header: "Items", render: (o) => `${o.items.length} producto(s)` },
-    { key: "total", header: "Total", render: (o) => currency.format(o.total) },
+    { key: "total", header: "Total", render: (o) => formatPrice(o.total, o.currency) },
     {
       key: "status",
       header: "Estado",

@@ -1,4 +1,5 @@
 import { Schema, model, models, type InferSchemaType, type Model, type Types } from "mongoose";
+import { CURRENCIES } from "@/lib/currency";
 
 export const ORDER_STATUSES = [
   "pendiente",
@@ -31,6 +32,9 @@ const OrderSchema = new Schema(
       phone: String,
     },
     items: { type: [OrderItemSchema], required: true },
+    // Todos los items de un mismo pedido comparten moneda (se valida al
+    // crear el pedido); "USD" por default para pedidos previos a este campo.
+    currency: { type: String, enum: CURRENCIES, default: "USD" },
     subtotal: { type: Number, required: true },
     total: { type: Number, required: true },
     status: { type: String, enum: ORDER_STATUSES, default: "pendiente", index: true },

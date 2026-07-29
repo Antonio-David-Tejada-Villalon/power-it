@@ -2,6 +2,7 @@
 
 import * as XLSX from "xlsx";
 import { saveFile } from "@/lib/exportUtils";
+import { CURRENCIES } from "@/lib/currency";
 import type { Product, Category } from "@/lib/types";
 
 export const IMPORT_HEADERS = [
@@ -11,6 +12,7 @@ export const IMPORT_HEADERS = [
   "Slug",
   "Descripcion",
   "Precio",
+  "Moneda",
   "PrecioComparacion",
   "Stock",
   "Categoria",
@@ -28,6 +30,7 @@ export interface ProductImportRow {
   Slug?: string;
   Descripcion?: string;
   Precio?: string | number;
+  Moneda?: string;
   PrecioComparacion?: string | number;
   Stock?: string | number;
   Categoria?: string;
@@ -46,6 +49,7 @@ const EXAMPLE_ROWS: ProductImportRow[] = [
     Slug: "laptop-ejemplo-15",
     Descripcion: "Descripción breve del producto.",
     Precio: 999,
+    Moneda: "USD",
     PrecioComparacion: 1099,
     Stock: 10,
     Categoria: "Laptops",
@@ -62,6 +66,7 @@ const EXAMPLE_ROWS: ProductImportRow[] = [
     Slug: "",
     Descripcion: "Se genera el slug automáticamente si se deja vacío.",
     Precio: 25,
+    Moneda: "ARS",
     PrecioComparacion: "",
     Stock: 30,
     Categoria: "Periféricos",
@@ -93,11 +98,12 @@ export async function downloadProductImportTemplate(categories: Category[]) {
     ["Slug", "Opcional. Se genera automáticamente a partir del Nombre si se deja vacío."],
     ["Descripcion", "Opcional."],
     ["Precio", "Obligatorio. Número, sin símbolo de moneda (ej: 999)."],
+    ["Moneda", `Opcional. Una de: ${CURRENCIES.join(", ")}. Si se deja vacío, se usa USD.`],
     ["PrecioComparacion", "Opcional. Precio anterior/tachado."],
     ["Stock", "Obligatorio. Número entero (ej: 10)."],
     ["Categoria", "Obligatorio. Debe coincidir EXACTAMENTE con el nombre de una categoría existente (ver abajo)."],
     ["Marca", "Opcional."],
-    ["Imagenes", "Opcional. URLs separadas por coma."],
+    ["Imagenes", "Opcional. URLs separadas por coma. Cada URL debe ser https y terminar en .jpg, .png, .gif, .webp, .avif o .svg — cualquier sitio sirve."],
     ["Especificaciones", "Opcional. Formato: Clave: Valor; Clave2: Valor2 (separadas por punto y coma)."],
     ["Estado", "activo, agotado o descontinuado. Si se deja vacío, se usa 'activo'."],
     ["Destacado", "Si o No. Si se deja vacío, se usa 'No'."],
@@ -143,6 +149,7 @@ export async function exportProductsToExcel(products: Product[], fileName: strin
     Slug: p.slug,
     Descripcion: p.description,
     Precio: p.price,
+    Moneda: p.currency,
     PrecioComparacion: p.compareAtPrice ?? "",
     Stock: p.stock,
     Categoria: typeof p.category === "object" ? p.category.name : "",

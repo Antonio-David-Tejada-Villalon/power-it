@@ -7,6 +7,7 @@ import { Pencil, Trash2, Save, Download } from "lucide-react";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/Badge";
 import { exportProductsToExcel } from "@/lib/productImportExport";
+import { formatPrice } from "@/lib/currency";
 import type { Product } from "@/lib/types";
 
 interface ProductsTableProps {
@@ -17,8 +18,6 @@ interface ProductsTableProps {
   selectable?: boolean;
   reloadToken?: number;
 }
-
-const currency = new Intl.NumberFormat("es", { style: "currency", currency: "USD" });
 
 export function ProductsTable({
   canWrite,
@@ -106,7 +105,7 @@ export function ProductsTable({
       render: (p) => (
         <div className="flex items-center gap-3 min-w-[220px]">
           <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-surface flex-shrink-0">
-            {p.images[0] && <Image src={p.images[0]} alt={p.name} fill className="object-cover" />}
+            {p.images[0] && <Image src={p.images[0]} alt={p.name} fill unoptimized className="object-cover" />}
           </div>
           <div>
             <p className="font-semibold line-clamp-1">{p.name}</p>
@@ -120,7 +119,7 @@ export function ProductsTable({
       header: "Categoría",
       render: (p) => (typeof p.category === "object" ? p.category.name : "—"),
     },
-    { key: "price", header: "Precio", render: (p) => currency.format(p.price) },
+    { key: "price", header: "Precio", render: (p) => formatPrice(p.price, p.currency) },
     {
       key: "stock",
       header: "Stock",

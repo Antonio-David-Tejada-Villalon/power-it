@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Trophy } from "lucide-react";
+import { formatPrice } from "@/lib/currency";
 
 interface TopProduct {
   productId: string;
@@ -12,8 +13,6 @@ interface TopProduct {
   revenue: number;
   image: string | null;
 }
-
-const currency = new Intl.NumberFormat("es", { style: "currency", currency: "USD" });
 
 const MEDAL_COLORS = ["text-warning", "text-foreground-secondary", "text-[#B87333]"];
 
@@ -60,7 +59,7 @@ export function TopProductsRanking({ from, to }: TopProductsRankingProps) {
                 {i + 1}
               </span>
               <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-surface flex-shrink-0">
-                {item.image && <Image src={item.image} alt={item.name} fill className="object-cover" />}
+                {item.image && <Image src={item.image} alt={item.name} fill unoptimized className="object-cover" />}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm line-clamp-1">{item.name}</p>
@@ -68,7 +67,7 @@ export function TopProductsRanking({ from, to }: TopProductsRankingProps) {
               </div>
               <div className="text-right flex-shrink-0">
                 <p className="font-semibold text-sm">{item.unitsSold} unid.</p>
-                <p className="text-xs text-foreground-secondary">{currency.format(item.revenue)}</p>
+                <p className="text-xs text-foreground-secondary">{formatPrice(item.revenue, "USD")}</p>
               </div>
             </div>
           ))}

@@ -1,26 +1,40 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Cpu, ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import type { Product } from "@/lib/types";
+import { formatPrice, convertAmount, type Currency, type RateTable } from "@/lib/currency";
 
 interface ProductDetailModalProps {
   product: Product | null;
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (product: Product, cantidad: number) => void;
+  onAdd: (product: Product, cantidad: number) => { ok: true } | { ok: false; error: string };
+  visitorCurrency?: Currency;
+  rates?: RateTable;
 }
 
-const currency = new Intl.NumberFormat("es", { style: "currency", currency: "USD" });
-
-export const ProductDetailModal = ({ product, isOpen, onClose, onAdd }: ProductDetailModalProps) => {
+export const ProductDetailModal = ({ product, isOpen, onClose, onAdd, visitorCurrency, rates }: ProductDetailModalProps) => {
+  const [cartError, setCartError] = useState<string | null>(null);
   if (!product) return null;
 
   const imageUrl = product.images[0] ?? "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1000&auto=format&fit=crop";
   const categoryName = typeof product.category === "object" ? product.category.name : undefined;
   const specs = Object.entries(product.specs ?? {});
+
+  const showConverted = visitorCurrency && rates && visitorCurrency !== product.currency;
+  const convertedPrice = showConverted ? convertAmount(product.price, product.currency, visitorCurrency, rates) : null;
+
+  const handleAdd = () => {
+    const result = onAdd(product, 1);
+    if (result.ok) {
+      onClose();
+    } else {
+      setCartError(result.error);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -47,7 +61,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onAdd }: ProductD
             </button>
 
             <div className="relative w-full md:w-2/5 aspect-square md:aspect-auto h-64 md:h-auto overflow-hidden bg-surface">
-              <Image src={imageUrl} alt={product.name} fill className="object-cover" />
+              <Image src={imageUrl} alt={product.name} fill unoptimized className="object-cover" />
             </div>
 
             <div className="flex-1 p-8 md:p-10 flex flex-col justify-start overflow-y-auto space-y-6">
@@ -61,7 +75,16 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onAdd }: ProductD
 
                 <h2 className="font-heading text-3xl md:text-4xl font-bold leading-tight">{product.name}</h2>
                 <p className="text-foreground-secondary">{product.brand ?? product.sku}</p>
-                <p className="font-heading text-3xl font-bold text-primary">{currency.format(product.price)}</p>
+                <div>
+                  <p className="font-heading text-3xl font-bold text-primary">
+                    {formatPrice(convertedPrice ?? product.price, showConverted ? visitorCurrency! : product.currency)}
+                  </p>
+                  {showConverted && (
+                    <p className="text-xs text-foreground-secondary mt-1">
+                      ≈ {formatPrice(product.price, product.currency)} · precio de referencia, puede variar
+                    </p>
+                  )}
+                </div>
 
                 <div className="w-12 h-1 bg-primary/30 rounded-full" />
 
@@ -79,11 +102,9 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onAdd }: ProductD
                 </div>
               )}
 
+              {cartError && <p className="text-sm text-danger">{cartError}</p>}
               <button
-                onClick={() => {
-                  onAdd(product, 1);
-                  onClose();
-                }}
+                onClick={handleAdd}
                 disabled={product.status === "agotado" || product.stock === 0}
                 className="w-full py-4 bg-primary text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-primary-hover transition-colors disabled:opacity-40"
               >

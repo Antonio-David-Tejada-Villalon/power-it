@@ -5,7 +5,8 @@ import { Product } from "@/models/Product";
 import { Category } from "@/models/Category";
 import { requirePermission, handleApiError } from "@/lib/auth/guard";
 import { logAudit } from "@/lib/audit";
-import { slugify } from "@/lib/utils";
+import { slugify, isImageUrl } from "@/lib/utils";
+import { CURRENCIES, isCurrency, type Currency } from "@/lib/currency";
 
 const VALID_STATUS = ["activo", "agotado", "descontinuado"] as const;
 
@@ -16,6 +17,7 @@ const RowSchema = z.object({
   Slug: z.string().optional(),
   Descripcion: z.string().optional(),
   Precio: z.union([z.string(), z.number()]).optional(),
+  Moneda: z.string().optional(),
   PrecioComparacion: z.union([z.string(), z.number()]).optional(),
   Stock: z.union([z.string(), z.number()]).optional(),
   Categoria: z.string().optional(),
@@ -116,6 +118,27 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      const currencyRaw = row.Moneda?.trim().toUpperCase();
+      if (currencyRaw && !isCurrency(currencyRaw)) {
+        errors.push({
+          row: rowNum,
+          sku,
+          message: `Moneda "${row.Moneda}" inválida (usar ${CURRENCIES.join(", ")})`,
+        });
+        continue;
+      }
+
+      const images = parseImages(row.Imagenes);
+      const invalidImage = images.find((url) => !isImageUrl(url));
+      if (invalidImage) {
+        errors.push({
+          row: rowNum,
+          sku,
+          message: `Imagen inválida "${invalidImage}": debe ser https y terminar en .jpg, .png, .gif, .webp, .avif o .svg`,
+        });
+        continue;
+      }
+
       const statusRaw = row.Estado?.trim().toLowerCase();
       if (statusRaw && !VALID_STATUS.includes(statusRaw as (typeof VALID_STATUS)[number])) {
         errors.push({
@@ -130,15 +153,17 @@ export async function POST(request: NextRequest) {
       const compareAtPrice = toNumber(row.PrecioComparacion);
       const isbnRaw = row.ISBN !== undefined ? String(row.ISBN).trim() : "";
       const slug = row.Slug?.trim() || slugify(name);
+      const currency: Currency = currencyRaw && isCurrency(currencyRaw) ? currencyRaw : "USD";
 
       const fields = {
         name,
         slug,
         description: row.Descripcion?.trim() ?? "",
         price,
+        currency,
         compareAtPrice,
         stock,
-        images: parseImages(row.Imagenes),
+        images,
         category: category._id,
         brand: row.Marca?.trim() || undefined,
         specs: parseSpecs(row.Especificaciones),

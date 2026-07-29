@@ -10,6 +10,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { logAudit } from "@/lib/audit";
 import { reserveStock } from "@/lib/inventory";
 import { nextOrderNumber } from "@/lib/orderNumber";
+import type { Currency } from "@/lib/currency";
 
 export async function GET(request: NextRequest) {
   try {
@@ -70,6 +71,7 @@ export async function POST(request: NextRequest) {
   const productMap = new Map(products.map((p) => [String(p._id), p]));
 
   let items;
+  let orderCurrency: Currency;
   try {
     items = parsed.data.items.map(({ productId, quantity }) => {
       const product = productMap.get(productId);
@@ -82,8 +84,19 @@ export async function POST(request: NextRequest) {
         price: product.price,
         quantity,
         subtotal,
+        currency: product.currency,
       };
     });
+
+    // Un pedido no puede mezclar monedas: el total solo tiene sentido si
+    // todos los items se suman en la misma unidad.
+    const currencies = new Set(items.map((i) => i.currency));
+    if (currencies.size > 1) {
+      throw new Error(
+        "Los productos del pedido tienen monedas distintas; no se pueden combinar en un mismo pedido."
+      );
+    }
+    orderCurrency = items[0].currency;
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Producto no encontrado" },
@@ -115,6 +128,7 @@ export async function POST(request: NextRequest) {
         phone: parsed.data.customer.phone,
       },
       items,
+      currency: orderCurrency,
       subtotal,
       total: subtotal,
       notes: parsed.data.notes,

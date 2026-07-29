@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, Wand2, ScanBarcode } from "lucide-react";
-import { slugify } from "@/lib/utils";
+import { slugify, isImageUrl } from "@/lib/utils";
+import { CURRENCIES, CURRENCY_LABELS } from "@/lib/currency";
 import type { Category, Product } from "@/lib/types";
 
 interface ProductFormProps {
@@ -22,6 +23,7 @@ const emptyForm = {
   slug: "",
   description: "",
   price: 0,
+  currency: "USD" as Product["currency"],
   stock: 0,
   images: "",
   category: "",
@@ -68,6 +70,7 @@ export function ProductForm({ productId }: ProductFormProps) {
           slug: p.slug,
           description: p.description,
           price: p.price,
+          currency: p.currency,
           stock: p.stock,
           images: p.images.join(", "),
           category: typeof p.category === "object" ? p.category.id : p.category,
@@ -89,15 +92,25 @@ export function ProductForm({ productId }: ProductFormProps) {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setSaving(true);
     setError(null);
+
+    const images = form.images
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const invalidImage = images.find((url) => !isImageUrl(url));
+    if (invalidImage) {
+      setError(
+        `"${invalidImage}" no es una URL de imagen válida: debe empezar con https:// y terminar en .jpg, .png, .gif, .webp, .avif o .svg`
+      );
+      return;
+    }
+
+    setSaving(true);
 
     const payload = {
       ...form,
-      images: form.images
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
+      images,
       specs: Object.fromEntries(
         specs
           .map(({ key, value }) => [key.trim(), value.trim()])
@@ -212,7 +225,7 @@ export function ProductForm({ productId }: ProductFormProps) {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div className="space-y-1">
           <label className="text-sm font-semibold">Precio</label>
           <input
@@ -224,6 +237,20 @@ export function ProductForm({ productId }: ProductFormProps) {
             onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
             className={inputClass}
           />
+        </div>
+        <div className="space-y-1">
+          <label className="text-sm font-semibold">Moneda</label>
+          <select
+            value={form.currency}
+            onChange={(e) => setForm({ ...form, currency: e.target.value as Product["currency"] })}
+            className={inputClass}
+          >
+            {CURRENCIES.map((c) => (
+              <option key={c} value={c}>
+                {CURRENCY_LABELS[c]}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="space-y-1">
           <label className="text-sm font-semibold">Stock</label>
@@ -263,7 +290,15 @@ export function ProductForm({ productId }: ProductFormProps) {
 
       <div className="space-y-1">
         <label className="text-sm font-semibold">Imágenes (URLs separadas por coma)</label>
-        <input value={form.images} onChange={(e) => setForm({ ...form, images: e.target.value })} className={inputClass} />
+        <input
+          value={form.images}
+          onChange={(e) => setForm({ ...form, images: e.target.value })}
+          placeholder="https://ejemplo.com/foto.jpg, https://otro-sitio.com/imagen.png"
+          className={inputClass}
+        />
+        <p className="text-xs text-foreground-secondary">
+          Cualquier sitio sirve, siempre que el link sea https y termine en .jpg, .png, .gif, .webp, .avif o .svg.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 items-end">

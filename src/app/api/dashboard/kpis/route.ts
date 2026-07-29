@@ -4,6 +4,19 @@ import { Order } from "@/models/Order";
 import { Product } from "@/models/Product";
 import { User } from "@/models/User";
 import { requireSession, handleApiError } from "@/lib/auth/guard";
+import { getExchangeRates } from "@/lib/exchangeRates";
+import { convertAmount, isCurrency, type Currency } from "@/lib/currency";
+
+/** Los pedidos pueden estar en distintas monedas — se agrupan por moneda y
+ * se convierten todas a USD (moneda de referencia del dashboard) antes de
+ * sumarlas, para que el KPI final sea un solo número con sentido. */
+async function sumAcrossCurrencies(buckets: { _id: string | null; total: number }[]): Promise<number> {
+  const rates = await getExchangeRates();
+  return buckets.reduce((acc, b) => {
+    const currency: Currency = b._id && isCurrency(b._id) ? b._id : "USD";
+    return acc + convertAmount(b.total, currency, "USD", rates);
+  }, 0);
+}
 
 function startOfDay(): Date {
   const d = new Date();
@@ -50,22 +63,27 @@ export async function GET(request: NextRequest) {
       await Promise.all([
         Order.aggregate([
           { $match: { createdAt: { $gte: from, $lte: to }, status: { $ne: "cancelado" } } },
-          { $group: { _id: null, total: { $sum: "$total" } } },
+          { $group: { _id: "$currency", total: { $sum: "$total" } } },
         ]),
         Order.countDocuments({ createdAt: { $gte: from, $lte: to }, status: { $ne: "cancelado" } }),
         Order.aggregate([
           { $match: { createdAt: { $gte: from, $lte: to }, status: "cancelado" } },
-          { $group: { _id: null, total: { $sum: "$total" } } },
+          { $group: { _id: "$currency", total: { $sum: "$total" } } },
         ]),
         Order.countDocuments({ createdAt: { $gte: from, $lte: to }, status: "cancelado" }),
         Product.countDocuments({ stock: 0 }),
         session.role === "admin" ? User.countDocuments({ status: "active" }) : null,
       ]);
 
+    const [ventas, egresos] = await Promise.all([
+      sumAcrossCurrencies(ventasAgg),
+      sumAcrossCurrencies(egresosAgg),
+    ]);
+
     const kpis = [
-      { label: "Ventas del período", value: ventasAgg[0]?.total ?? 0, format: "currency" },
+      { label: "Ventas del período (USD)", value: ventas, format: "currency" },
       { label: "Pedidos del período", value: pedidosPeriodo },
-      { label: "Egresos (cancelados)", value: egresosAgg[0]?.total ?? 0, format: "currency" },
+      { label: "Egresos (cancelados, USD)", value: egresos, format: "currency" },
       { label: "Pedidos cancelados", value: pedidosCancelados },
       { label: "Productos sin stock", value: productosSinStock },
     ];

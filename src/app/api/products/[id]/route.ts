@@ -6,6 +6,13 @@ import { toClientProduct } from "@/lib/serializers";
 import { requireSession, requireRole, handleApiError, ApiAuthError } from "@/lib/auth/guard";
 import { hasPermission } from "@/lib/auth/permissions";
 import { logAudit } from "@/lib/audit";
+import { CURRENCIES } from "@/lib/currency";
+import { isImageUrl } from "@/lib/utils";
+
+const ImageUrlSchema = z
+  .string()
+  .url()
+  .refine(isImageUrl, "La URL debe ser https y apuntar a una imagen (jpg, png, gif, webp, avif o svg)");
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -26,9 +33,10 @@ const ProductUpdateSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
   price: z.number().min(0).optional(),
+  currency: z.enum(CURRENCIES).optional(),
   compareAtPrice: z.number().min(0).optional(),
   stock: z.number().min(0).optional(),
-  images: z.array(z.string()).optional(),
+  images: z.array(ImageUrlSchema).optional(),
   category: z.string().optional(),
   brand: z.string().optional(),
   specs: z.record(z.string(), z.string()).optional(),

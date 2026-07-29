@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
+import { formatPrice } from "@/lib/currency";
 
 interface KPICardProps {
   label: string;
@@ -10,10 +11,8 @@ interface KPICardProps {
   icon?: LucideIcon;
 }
 
-const currency = new Intl.NumberFormat("es", { style: "currency", currency: "USD" });
-
 export function KPICard({ label, value, format, icon: Icon }: KPICardProps) {
-  const display = format === "currency" && typeof value === "number" ? currency.format(value) : value;
+  const display = format === "currency" && typeof value === "number" ? formatPrice(value, "USD") : value;
 
   return (
     <motion.div

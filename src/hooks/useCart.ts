@@ -25,8 +25,19 @@ export const useCart = () => {
     localStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
 
-  const addToCart = (product: Product, cantidad: number) => {
-    if (cantidad <= 0) return;
+  /** Un mismo pedido no puede mezclar monedas (el total dejaría de tener
+   * sentido). Si el carrito ya tiene productos de otra moneda, se rechaza el
+   * agregado y se avisa cuál es la moneda vigente del carrito. */
+  const addToCart = (product: Product, cantidad: number): { ok: true } | { ok: false; error: string } => {
+    if (cantidad <= 0) return { ok: false, error: "Cantidad inválida" };
+
+    const cartCurrency = cart[0]?.currency;
+    if (cartCurrency && cartCurrency !== product.currency) {
+      return {
+        ok: false,
+        error: `Tu carrito ya tiene productos en ${cartCurrency}. No se pueden combinar monedas distintas en un mismo pedido — vaciá el carrito o finalizá ese pedido primero.`,
+      };
+    }
 
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
@@ -38,6 +49,7 @@ export const useCart = () => {
       return [...prev, { ...product, cantidad }];
     });
     setIsSidebarOpen(true);
+    return { ok: true };
   };
 
   const removeFromCart = (id: string) => {

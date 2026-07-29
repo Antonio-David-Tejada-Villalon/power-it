@@ -18,11 +18,14 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Logo } from "@/components/ui/Logo";
 import { exportToExcel, exportToPDF } from "@/lib/exportUtils";
 import Link from "next/link";
+import type { Currency, RateTable } from "@/lib/currency";
 
 export default function CatalogPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [contactEmail, setContactEmail] = useState("ventas@powerit.local");
+  const [visitorCurrency, setVisitorCurrency] = useState<Currency | undefined>(undefined);
+  const [rates, setRates] = useState<RateTable | undefined>(undefined);
   const [user, setUser] = useState<ClientUser | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -57,6 +60,12 @@ export default function CatalogPage() {
     fetch("/api/auth/me")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => data?.user && setUser(data.user));
+    fetch("/api/currency")
+      .then((res) => res.json())
+      .then((data) => {
+        setVisitorCurrency(data.currency);
+        setRates(data.rates);
+      });
   }, []);
 
   // Etapa 1: por texto de búsqueda + categoría. De este subconjunto se derivan
@@ -227,7 +236,7 @@ export default function CatalogPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-12">
+      <main id="main-content" className="max-w-7xl mx-auto px-6 py-12">
         <div className="flex flex-col md:flex-row gap-10">
           {categories.length > 0 && (
             <CategorySidebar
@@ -290,6 +299,8 @@ export default function CatalogPage() {
                         product={product}
                         onAdd={addToCart}
                         onShowDetails={handleShowDetails}
+                        visitorCurrency={visitorCurrency}
+                        rates={rates}
                       />
                     ))}
                   </AnimatePresence>
@@ -379,6 +390,8 @@ export default function CatalogPage() {
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
         onAdd={addToCart}
+        visitorCurrency={visitorCurrency}
+        rates={rates}
       />
 
       <CartSidebar
