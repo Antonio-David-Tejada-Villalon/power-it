@@ -20,7 +20,7 @@ Catálogo + panel administrativo de **Power IT** (tienda de tecnología). Arranc
 npm install
 npm run dev     # levanta Mongo local automático + Next en :3000
 npm run seed     # puebla categorías, ~21 productos y usuarios de prueba
-npm test         # corre la suite de Vitest (hierarchy.ts + inventory.ts)
+npm test         # corre la suite de Vitest (hierarchy.ts + inventory.ts + orderLinking.ts)
 ```
 
 Credenciales sembradas por `npm run seed`:
@@ -50,7 +50,7 @@ Credenciales sembradas por `npm run seed`:
 ```
 src/
   proxy.ts                     # RBAC de rutas /dashboard, /mi-cuenta, /api (reemplaza middleware.ts)
-  models/                      # User, Product, Category, Order, AuditLog, Settings, UserEditRequest
+  models/                      # User, Product, Category, Order, AuditLog, Settings, UserEditRequest, RateLimit, Counter, ExchangeRate, Cart
   lib/
     db.ts                      # conexión Mongo (singleton + mongodb-memory-server)
     auth/                      # jwt, password, permissions, session, guard (RBAC helpers)
@@ -90,12 +90,20 @@ Se hizo una auditoría integral (arquitectura/seguridad/datos/UX/infra/calidad/n
 
 - **`xlsx` actualizado a la versión parchada de SheetJS** (SEC-06): las versiones post-0.18 ya no se publican en el registro de npm, solo en el CDN oficial de SheetJS. Se evaluó migrar a `exceljs` primero, pero **se descartó**: trae su propia cadena de dependencias (`archiver` → `glob`/`minimatch`/`brace-expansion`, `uuid`) con vulnerabilidades altas nuevas (DoS, buffer bounds) — no era una mejora neta, solo cambiaba qué estaba roto. En cambio, se instaló `xlsx` directo desde la URL versionada y pinneada del CDN oficial (`https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz` en `package.json`, no la etiqueta flotante `latest`): mismo API, cero dependencias nuevas, y el advisory de `xlsx` desaparece de `npm audit`. Probado con un roundtrip real (generar → leer → comparar) idéntico al usado en `productImportExport.ts`/`auditExport.ts`/`summaryExport.ts`.
 
-Pendiente del plan original: `dompurify` desactualizado (vía `jspdf`, moderado — sin fix directo disponible hoy) y los de negocio (BIZ-01/02, ver abajo). Ver el informe completo si se necesita retomarlos.
+Pendiente del plan original: `dompurify` desactualizado (vía `jspdf`, moderado — sin fix directo disponible hoy). Ver el informe completo si se necesita retomar eso.
 
-### Puntos de negocio pendientes de tu decisión (no son código)
+### Puntos de negocio (BIZ-01/02) — decididos
 
-- **BIZ-01**: el "checkout" del catálogo es una solicitud de presupuesto (recolecta datos y genera un pedido para seguimiento manual del staff), no un cobro real con pasarela de pago. Es un modelo válido si es intencional (venta B2B por cotización) — solo quería confirmar que es la decisión de negocio correcta y no algo que quedó a medio construir.
-- **BIZ-02**: no hay re-enganche de carrito abandonado ni vínculo entre un checkout de invitado y una cuenta registrada — hoy no se puede identificar a un cliente recurrente para remarketing. Si es una prioridad, es una función nueva a diseñar (no un bug), avisame y la planificamos.
+- **BIZ-01 (sin cambios, decisión confirmada)**: el "checkout" del catálogo sigue siendo una solicitud de presupuesto (recolecta datos y genera un pedido para seguimiento manual del staff), no un cobro con pasarela de pago — es el modelo de negocio intencional (venta B2B por cotización), con cobro por un método externo al sistema. Una pasarela de pago real queda como posible trabajo futuro, a decidir más adelante.
+- **BIZ-02 (construido)**: ver la sección siguiente.
+
+## Reconocimiento de cliente recurrente / carrito guardado (BIZ-02, 29 jul 2026)
+
+- **Vínculo automático de pedidos de invitado a la cuenta** (`src/lib/orderLinking.ts` → `linkGuestOrdersToUser`): al hacer login, registrarse o entrar con Google, si el usuario es `cliente`, se buscan pedidos previos hechos como invitado (`customer.user: null`) con el mismo email (match case-insensitive vía `collation`, no regex) y se les asigna `customer.user` a la cuenta recién identificada. Así, alguien que compró sin loguearse y después crea cuenta con el mismo email ve automáticamente ese pedido en "Mis pedidos" — sin pedirle nada extra. Enganchado en `POST /api/auth/login`, `POST /api/auth/register` y `GET /api/auth/google/callback`.
+- **Carrito guardado del lado del servidor** (`src/models/Cart.ts` + `GET`/`PUT /api/cart`): un cliente logueado tiene su carrito persistido en Mongo (uno por usuario), no solo en `localStorage` del navegador. `useCart.syncWithAccount(userId)` se llama una vez detectada la sesión (en el efecto de `/api/auth/me` del catálogo público) y combina el carrito del servidor con el local sumando cantidades de productos en común — así un cliente que agrega productos desde el celular y después entra desde la computadora (o borra el navegador) encuentra su carrito intacto. Cada cambio al carrito de un usuario sincronizado se persiste al servidor en el mismo efecto que ya guardaba en `localStorage` (best-effort, no bloquea la UI si falla la red).
+- **Enlace "Mis pedidos" en el catálogo público**: antes un cliente logueado no tenía forma de llegar a `/mi-cuenta/pedidos` desde el header del catálogo (ese link solo existía para roles de staff, hacia `/dashboard`). Ahora, si el usuario logueado es `cliente`, el header muestra "Mis pedidos" en su lugar.
+- No se resucitó el sistema de notificación por email/WhatsApp revertido anteriormente (ver nota más abajo) — esta solución no depende de ninguna integración externa nueva.
+- Probado con Playwright de punta a punta: (1) pedido de invitado confirmado con un email de prueba → registro de cuenta con ese mismo email → el pedido aparece en "Mis pedidos" (1 fila, antes 0 sin este cambio); (2) login con una cuenta existente → agregar un producto al carrito (confirmado que `PUT /api/cart` lo persiste) → `localStorage` borrado y página recargada simulando "otro dispositivo" → el carrito reaparece con el mismo producto (badge del carrito en 1). Datos de prueba eliminados de la base local al terminar.
 
 ## Imágenes de cualquier URL + multi-moneda (29 jul 2026)
 
@@ -118,6 +126,7 @@ Pendiente del plan original: `dompurify` desactualizado (vía `jspdf`, moderado 
 - **Ayuda contextual**: ícono "?" con tips en cada sección del dashboard.
 - **Marca**: logo real (versión clara/oscura según tema, clickeable a "/" desde cualquier página) + favicon, paleta cyan/azul, tipografías Space Grotesk + Inter. Metadatos Open Graph/Twitter con imagen generada (`src/app/opengraph-image.tsx`) para que los links compartidos (WhatsApp, etc.) muestren logo + título + descripción.
 - **Footer del catálogo**: crédito del desarrollador con email/llamada/WhatsApp clickeables y saludo pre-cargado.
+- **Reconocimiento de cliente recurrente**: pedidos hechos como invitado se vinculan solos a la cuenta si después se registra/loguea con el mismo email; carrito guardado en el servidor por usuario (sobrevive cambio de dispositivo/navegador); enlace "Mis pedidos" visible en el header del catálogo para clientes logueados.
 - **Usuarios jerárquicos + solicitudes de edición**: además de `cliente`, el staff tiene 4 roles (`admin > supervisor > encargado > operario`). Cada rol de staff administra únicamente a los roles debajo suyo (`src/lib/auth/hierarchy.ts`): admin ve/edita todo de forma inmediata; cualquier edición de cuenta (nombre/rol/estado/contraseña) hecha por alguien que no es admin —sobre sí mismo o sobre un subordinado— no se aplica al instante, sino que crea una `UserEditRequest` pendiente que escala al gerente directo de quien la generó (admin puede otorgar a un supervisor el privilegio `canApproveOwnEdits` para que se autoapruebe sus propios cambios). Toda solicitud queda con motivo del solicitante y motivo de quien aprueba/rechaza/elimina, visible en "Solicitudes" (`RequestsManager`) y también en Auditoría. "Mi perfil" (`/dashboard/perfil`) es la pantalla de autoservicio de nombre/contraseña para cualquier rol de staff.
 
 ## Pendiente de credenciales reales (no es código, es configuración externa)

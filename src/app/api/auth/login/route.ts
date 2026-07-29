@@ -8,6 +8,7 @@ import { permissionsForRole } from "@/lib/auth/permissions";
 import { toClientUser } from "@/lib/serializers";
 import { logAudit } from "@/lib/audit";
 import { checkRateLimit } from "@/lib/auth/rateLimit";
+import { linkGuestOrdersToUser } from "@/lib/orderLinking";
 
 const LoginSchema = z.object({
   email: z.string().email(),
@@ -74,6 +75,10 @@ export async function POST(request: NextRequest) {
 
     user.lastLoginAt = new Date();
     await user.save();
+
+    if (user.role === "cliente") {
+      await linkGuestOrdersToUser(String(user._id), user.email);
+    }
 
     await logAudit({
       actorId: String(user._id),

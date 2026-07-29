@@ -7,6 +7,7 @@ import { issueSessionCookies } from "@/lib/auth/session";
 import { permissionsForRole } from "@/lib/auth/permissions";
 import { toClientUser } from "@/lib/serializers";
 import { logAudit } from "@/lib/audit";
+import { linkGuestOrdersToUser } from "@/lib/orderLinking";
 
 const RegisterSchema = z.object({
   name: z.string().min(2),
@@ -50,6 +51,8 @@ export async function POST(request: NextRequest) {
       refreshTokenVersion: user.refreshTokenVersion ?? 0,
       email: user.email,
     });
+
+    await linkGuestOrdersToUser(String(user._id), user.email);
 
     await logAudit({
       actorId: String(user._id),

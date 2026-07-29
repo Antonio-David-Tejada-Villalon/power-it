@@ -16,6 +16,7 @@ import "@/models/UserEditRequest";
 import "@/models/RateLimit";
 import "@/models/Counter";
 import "@/models/ExchangeRate";
+import "@/models/Cart";
 
 interface MongooseCache {
   conn: typeof mongoose | null;

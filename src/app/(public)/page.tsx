@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ShoppingBag, ArrowRight, HelpCircle, LayoutDashboard, LogIn } from "lucide-react";
+import { Search, ShoppingBag, ArrowRight, HelpCircle, LayoutDashboard, LogIn, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Product, Category, ClientUser } from "@/lib/types";
 import { useCart } from "@/hooks/useCart";
@@ -40,7 +40,7 @@ export default function CatalogPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
 
-  const { cart, addToCart, removeFromCart, updateQuantity, clearCart, isSidebarOpen, setIsSidebarOpen } =
+  const { cart, addToCart, removeFromCart, updateQuantity, clearCart, isSidebarOpen, setIsSidebarOpen, syncWithAccount } =
     useCart();
 
   const loadProducts = () => {
@@ -59,14 +59,20 @@ export default function CatalogPage() {
       .then((data) => data.settings?.contactEmail && setContactEmail(data.settings.contactEmail));
     fetch("/api/auth/me")
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => data?.user && setUser(data.user));
+      .then((data) => {
+        if (!data?.user) return;
+        setUser(data.user);
+        if (data.user.role === "cliente") {
+          syncWithAccount(data.user.id);
+        }
+      });
     fetch("/api/currency")
       .then((res) => res.json())
       .then((data) => {
         setVisitorCurrency(data.currency);
         setRates(data.rates);
       });
-  }, []);
+  }, [syncWithAccount]);
 
   // Etapa 1: por texto de búsqueda + categoría. De este subconjunto se derivan
   // las especificaciones y el rango de precio disponibles para afinar la búsqueda.
@@ -202,7 +208,7 @@ export default function CatalogPage() {
 
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            {user && user.role !== "cliente" ? (
+            {user && user.role !== "cliente" && (
               <Link
                 href="/dashboard"
                 className="hidden sm:flex items-center gap-2 px-4 py-3 glass rounded-2xl hover:bg-primary/10 hover:border-primary/30 transition-all text-sm font-semibold"
@@ -210,16 +216,24 @@ export default function CatalogPage() {
                 <LayoutDashboard size={18} className="text-primary" />
                 Panel
               </Link>
-            ) : (
-              !user && (
-                <Link
-                  href="/login"
-                  className="hidden sm:flex items-center gap-2 px-4 py-3 glass rounded-2xl hover:bg-primary/10 hover:border-primary/30 transition-all text-sm font-semibold"
-                >
-                  <LogIn size={18} className="text-primary" />
-                  Acceder
-                </Link>
-              )
+            )}
+            {user && user.role === "cliente" && (
+              <Link
+                href="/mi-cuenta/pedidos"
+                className="hidden sm:flex items-center gap-2 px-4 py-3 glass rounded-2xl hover:bg-primary/10 hover:border-primary/30 transition-all text-sm font-semibold"
+              >
+                <Package size={18} className="text-primary" />
+                Mis pedidos
+              </Link>
+            )}
+            {!user && (
+              <Link
+                href="/login"
+                className="hidden sm:flex items-center gap-2 px-4 py-3 glass rounded-2xl hover:bg-primary/10 hover:border-primary/30 transition-all text-sm font-semibold"
+              >
+                <LogIn size={18} className="text-primary" />
+                Acceder
+              </Link>
             )}
             <button
               onClick={() => setIsSidebarOpen(true)}

@@ -4,6 +4,7 @@ import { User } from "@/models/User";
 import { issueSessionCookies } from "@/lib/auth/session";
 import { permissionsForRole } from "@/lib/auth/permissions";
 import { logAudit } from "@/lib/audit";
+import { linkGuestOrdersToUser } from "@/lib/orderLinking";
 
 interface GoogleTokenResponse {
   access_token: string;
@@ -94,6 +95,8 @@ export async function GET(request: NextRequest) {
       refreshTokenVersion: user.refreshTokenVersion ?? 0,
       email: user.email,
     });
+
+    await linkGuestOrdersToUser(String(user._id), user.email);
 
     await logAudit({
       actorId: String(user._id),
