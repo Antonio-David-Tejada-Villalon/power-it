@@ -88,7 +88,14 @@ Se hizo una auditoría integral (arquitectura/seguridad/datos/UX/infra/calidad/n
 
 - **Accesibilidad — motion + foco** (UX-01/UX-02): `MotionConfig reducedMotion="user"` en `ThemeProvider.tsx` hace que framer-motion respete automáticamente `prefers-reduced-motion` del sistema en toda la app; sumado a un `@media (prefers-reduced-motion: reduce)` en `globals.css` para transiciones CSS puras. Se agregó un enlace "Saltar al contenido principal" (oculto hasta recibir foco por teclado) apuntando a `#main-content` en el catálogo público y en todo el dashboard, y un `:focus-visible` consistente con la marca (antes dependía del outline por defecto del navegador, poco visible sobre las superficies "glass" oscuras). Verificado con Playwright: el skip-link aparece correctamente al tabular, y la app no rompe con `prefers-reduced-motion: reduce` emulado.
 
-Pendientes del plan original: `xlsx` desactualizado (SEC-06 — las versiones parchadas de SheetJS ya no se publican en npm, requiere sourcing externo o migrar a `exceljs`, decisión pendiente de confirmar), `dompurify` desactualizado (vía `jspdf`, moderado), y los de negocio (BIZ-01/02). Ver el informe completo si se necesita retomarlos.
+- **`xlsx` actualizado a la versión parchada de SheetJS** (SEC-06): las versiones post-0.18 ya no se publican en el registro de npm, solo en el CDN oficial de SheetJS. Se evaluó migrar a `exceljs` primero, pero **se descartó**: trae su propia cadena de dependencias (`archiver` → `glob`/`minimatch`/`brace-expansion`, `uuid`) con vulnerabilidades altas nuevas (DoS, buffer bounds) — no era una mejora neta, solo cambiaba qué estaba roto. En cambio, se instaló `xlsx` directo desde la URL versionada y pinneada del CDN oficial (`https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz` en `package.json`, no la etiqueta flotante `latest`): mismo API, cero dependencias nuevas, y el advisory de `xlsx` desaparece de `npm audit`. Probado con un roundtrip real (generar → leer → comparar) idéntico al usado en `productImportExport.ts`/`auditExport.ts`/`summaryExport.ts`.
+
+Pendiente del plan original: `dompurify` desactualizado (vía `jspdf`, moderado — sin fix directo disponible hoy) y los de negocio (BIZ-01/02, ver abajo). Ver el informe completo si se necesita retomarlos.
+
+### Puntos de negocio pendientes de tu decisión (no son código)
+
+- **BIZ-01**: el "checkout" del catálogo es una solicitud de presupuesto (recolecta datos y genera un pedido para seguimiento manual del staff), no un cobro real con pasarela de pago. Es un modelo válido si es intencional (venta B2B por cotización) — solo quería confirmar que es la decisión de negocio correcta y no algo que quedó a medio construir.
+- **BIZ-02**: no hay re-enganche de carrito abandonado ni vínculo entre un checkout de invitado y una cuenta registrada — hoy no se puede identificar a un cliente recurrente para remarketing. Si es una prioridad, es una función nueva a diseñar (no un bug), avisame y la planificamos.
 
 ## Imágenes de cualquier URL + multi-moneda (29 jul 2026)
 
