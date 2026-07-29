@@ -13,6 +13,7 @@ import "@/models/Order";
 import "@/models/AuditLog";
 import "@/models/Settings";
 import "@/models/UserEditRequest";
+import "@/models/RateLimit";
 
 interface MongooseCache {
   conn: typeof mongoose | null;

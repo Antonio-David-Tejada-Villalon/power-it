@@ -7,11 +7,17 @@ import { issueSessionCookies } from "@/lib/auth/session";
 import { permissionsForRole } from "@/lib/auth/permissions";
 import { toClientUser } from "@/lib/serializers";
 import { logAudit } from "@/lib/audit";
+import { checkRateLimit } from "@/lib/auth/rateLimit";
 
 const LoginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
 });
+
+// Por email: tolera algunos typos legítimos. Por IP: más laxo, porque una
+// oficina/NAT puede compartir la misma IP entre varios usuarios reales.
+const EMAIL_LIMIT = { windowMs: 15 * 60 * 1000, max: 8 };
+const IP_LIMIT = { windowMs: 15 * 60 * 1000, max: 30 };
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,6 +29,20 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
     const { email, password } = parsed.data;
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+
+    const [emailLimit, ipLimit] = await Promise.all([
+      checkRateLimit(`login:email:${email.toLowerCase()}`, EMAIL_LIMIT),
+      checkRateLimit(`login:ip:${ip}`, IP_LIMIT),
+    ]);
+    if (emailLimit.limited || ipLimit.limited) {
+      const retryAfterSeconds = Math.max(emailLimit.retryAfterSeconds, ipLimit.retryAfterSeconds);
+      return NextResponse.json(
+        { error: "Demasiados intentos. Probá de nuevo en unos minutos." },
+        { status: 429, headers: { "Retry-After": String(retryAfterSeconds) } }
+      );
+    }
+
     const user = await User.findOne({ email: email.toLowerCase() }).select("+passwordHash");
 
     if (!user || !user.passwordHash || user.status !== "active") {

@@ -88,7 +88,13 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       if (parsed.data.canApproveOwnEdits !== undefined) updates.canApproveOwnEdits = parsed.data.canApproveOwnEdits;
       if (password) updates.passwordHash = await hashPassword(password);
 
-      const updated = await User.findByIdAndUpdate(id, updates, { returnDocument: "after" });
+      // Cambiar la contraseña invalida cualquier refresh token emitido antes
+      // (ver /api/auth/refresh, que compara refreshTokenVersion) — así una
+      // sesión robada no sobrevive a un cambio de clave.
+      const mongoUpdate: Record<string, unknown> = { $set: updates };
+      if (password) mongoUpdate.$inc = { refreshTokenVersion: 1 };
+
+      const updated = await User.findByIdAndUpdate(id, mongoUpdate, { returnDocument: "after" });
 
       await logAudit({
         actorId: session.sub,

@@ -57,7 +57,12 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       }
       if (changes.passwordHash) updates.passwordHash = changes.passwordHash;
 
-      await User.findByIdAndUpdate(editRequest.targetUser, updates);
+      // Igual que en el PATCH directo de admin: si cambia la contraseña,
+      // se invalidan los refresh tokens ya emitidos para esa cuenta.
+      const mongoUpdate: Record<string, unknown> = { $set: updates };
+      if (changes.passwordHash) mongoUpdate.$inc = { refreshTokenVersion: 1 };
+
+      await User.findByIdAndUpdate(editRequest.targetUser, mongoUpdate);
     }
 
     const requestedById = String(editRequest.requestedBy);

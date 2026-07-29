@@ -70,10 +70,22 @@ src/
     ui/                        # ConfirmDialog, ReasonDialog, HelpPopover, DateRangePicker, DataTable, Logo, etc.
 ```
 
+## Auditoría de seguridad (28 jul 2026) — mitigaciones aplicadas
+
+Se hizo una auditoría integral (arquitectura/seguridad/datos/UX/infra/calidad/negocio) de solo lectura. Los tres hallazgos de mayor severidad ya se resolvieron:
+
+- **Rate limiting en login** (`src/lib/auth/rateLimit.ts` + `src/models/RateLimit.ts`): contador de ventana fija respaldado en Mongo con TTL, sin dependencias nuevas. Máx. 8 intentos/15min por email y 30/15min por IP; devuelve 429 + `Retry-After`.
+- **Revocación de sesión al cambiar contraseña**: `refreshTokenVersion` ahora se incrementa (`$inc`) en `PATCH /api/users/[id]` (admin directo) y al aprobar una `UserEditRequest` con contraseña — antes existía el campo pero nunca se tocaba, así que un refresh token robado seguía siendo válido después de cambiar la clave.
+- **Cabeceras de seguridad HTTP** (`next.config.ts` → `headers()`): CSP (sin nonces, `'unsafe-inline'` deliberado para no forzar renderizado dinámico en todo el sitio), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy` y HSTS. Verificado con Playwright en catálogo público, login y todo el dashboard admin sin ninguna violación de CSP en consola.
+- **Variables de entorno de producción fuera de "Preview"**: `MONGODB_URI`, `JWT_ACCESS_SECRET` y `JWT_REFRESH_SECRET` en Vercel quedaron con scope solo `Production` (antes también incluían `Preview`, lo que habría hecho que un futuro PR/preview deploy leyera y escribiera sobre la base de datos real). Cambio hecho a mano en el dashboard de Vercel, no es código.
+- **CI mínimo** (`.github/workflows/ci.yml`): corre `npx tsc --noEmit` y `npx eslint .` en cada push/PR a `main`. Antes nada impedía que un error de tipos o de lint llegara a producción; ahora al menos ese gate es automático, no depende de que alguien se acuerde de correrlo a mano.
+
+Hallazgos restantes (severidad media/baja/info) quedan pendientes de priorizar — ver el informe completo si se necesita retomarlos.
+
 ## Qué está construido (funcional hoy)
 
 - **Catálogo público**: sidebar de categorías (colapsa a 5 con "Ver todas"), filtros dinámicos de precio y especificaciones (aparecen al elegir categoría o buscar), indicador cantidad/stock en cada tarjeta ("1/5"), aviso "Agotado" elegante cuando stock=0, carrito, checkout con confirmación real de pedido.
-- **Auth + RBAC**: login/registro propios, Google OAuth *scaffolded* (ver pendientes), sesiones JWT, permisos por rol.
+- **Auth + RBAC**: login/registro propios, Google OAuth *scaffolded* (ver pendientes), sesiones JWT, permisos por rol. Rate limiting en `/api/auth/login` (`src/lib/auth/rateLimit.ts`, respaldado en Mongo con TTL, sin dependencias nuevas): máx. 8 intentos/15min por email y 30/15min por IP, respuesta 429 + `Retry-After`.
 - **Productos**: CRUD completo con especificaciones (clave/valor), ISBN/código de barras (compatible con lector USB), carga masiva desde Excel (plantilla descargable, upsert por SKU, reporte de errores por fila) y exportación (todos o seleccionados).
 - **Categorías**: alta, edición inline, borrado múltiple (bloquea si tienen productos asociados).
 - **Pedidos**: máquina de estados con pestañas, reserva real de stock (se descuenta al crear, se devuelve al cancelar, se vuelve a descontar al reactivar con validación de stock disponible), confirmación explícita antes de cualquier cambio de estado, borrado individual/múltiple.
