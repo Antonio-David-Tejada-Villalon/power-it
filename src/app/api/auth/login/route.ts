@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import * as Sentry from "@sentry/nextjs";
 import { connectDB } from "@/lib/db";
 import { User } from "@/models/User";
 import { comparePassword } from "@/lib/auth/password";
@@ -92,6 +93,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ user: toClientUser(user) });
   } catch (err) {
     console.error("[auth/login]", err);
+    Sentry.captureException(err);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

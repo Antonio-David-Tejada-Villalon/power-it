@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { connectDB } from "@/lib/db";
 import { User } from "@/models/User";
 import { issueSessionCookies } from "@/lib/auth/session";
@@ -110,6 +111,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   } catch (err) {
     console.error("[auth/google/callback]", err);
+    Sentry.captureException(err);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

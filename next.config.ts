@@ -12,13 +12,18 @@ const isDev = process.env.NODE_ENV === "development";
 // modo "unoptimized" (el servidor nunca las descarga ni las procesa), así que
 // esto no reabre el riesgo de SSRF/DoS del optimizador de imágenes de Next
 // contra un host arbitrario.
+// connect-src incluye los hosts de ingesta de Sentry (INFRA-03): el SDK de
+// cliente reporta errores vía fetch/beacon directo al navegador, así que sin
+// esto el propio CSP bloquearía en silencio cada evento antes de salir. Cubre
+// las tres regiones de datos de Sentry (global/US/EU); si no hay SENTRY_DSN
+// configurado no se llama a ningún host, así que no amplía el riesgo real.
 const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""};
   style-src 'self' 'unsafe-inline';
   img-src 'self' blob: data: https:;
   font-src 'self';
-  connect-src 'self';
+  connect-src 'self' https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io;
   object-src 'none';
   base-uri 'self';
   form-action 'self';

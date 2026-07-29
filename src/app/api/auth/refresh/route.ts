@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import * as Sentry from "@sentry/nextjs";
 import { connectDB } from "@/lib/db";
 import { User } from "@/models/User";
 import { verifyRefreshToken } from "@/lib/auth/jwt";
@@ -38,6 +39,7 @@ export async function POST() {
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[auth/refresh]", err);
+    Sentry.captureException(err);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

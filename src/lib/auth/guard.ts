@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { getSessionUser } from "./session";
 import { hasPermission, hasAnyRole } from "./permissions";
 import type { Role } from "@/models/User";
@@ -51,5 +52,6 @@ export function handleApiError(err: unknown) {
     );
   }
   console.error(err);
+  Sentry.captureException(err);
   return NextResponse.json({ error: "Error interno" }, { status: 500 });
 }

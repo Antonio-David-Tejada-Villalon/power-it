@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import * as Sentry from "@sentry/nextjs";
 import type { QueryFilter } from "mongoose";
 import { connectDB } from "@/lib/db";
 import { Order, type OrderDoc } from "@/models/Order";
@@ -139,6 +140,7 @@ export async function POST(request: NextRequest) {
     const { releaseStock } = await import("@/lib/inventory");
     await releaseStock(stockItems);
     console.error("[orders/create]", err);
+    Sentry.captureException(err);
     return NextResponse.json({ error: "No se pudo crear el pedido" }, { status: 500 });
   }
 
