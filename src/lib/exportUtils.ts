@@ -5,6 +5,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { CartItem } from "@/hooks/useCart";
 import { formatPrice, type Currency } from "@/lib/currency";
+import { sanitizeSpreadsheetCell } from "@/lib/utils";
 
 declare global {
   interface Window {
@@ -21,9 +22,9 @@ function cartCurrency(items: CartItem[]): Currency {
 export const exportToExcel = async (items: CartItem[], fileName: string) => {
   const data = items.map((item) => ({
     Cant: item.cantidad,
-    SKU: item.sku,
-    Producto: item.name,
-    Marca: item.brand ?? "",
+    SKU: sanitizeSpreadsheetCell(item.sku),
+    Producto: sanitizeSpreadsheetCell(item.name),
+    Marca: sanitizeSpreadsheetCell(item.brand ?? ""),
     Precio: item.price,
     Subtotal: item.price * item.cantidad,
   }));

@@ -14,9 +14,23 @@ interface ProductDetailModalProps {
   onAdd: (product: Product, cantidad: number) => { ok: true } | { ok: false; error: string };
   visitorCurrency?: Currency;
   rates?: RateTable;
+  relatedProducts?: Product[];
+  onSelectRelated?: (product: Product) => void;
 }
 
-export const ProductDetailModal = ({ product, isOpen, onClose, onAdd, visitorCurrency, rates }: ProductDetailModalProps) => {
+const FALLBACK_IMAGE =
+  "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=400&auto=format&fit=crop";
+
+export const ProductDetailModal = ({
+  product,
+  isOpen,
+  onClose,
+  onAdd,
+  visitorCurrency,
+  rates,
+  relatedProducts,
+  onSelectRelated,
+}: ProductDetailModalProps) => {
   const [cartError, setCartError] = useState<string | null>(null);
   if (!product) return null;
 
@@ -111,6 +125,29 @@ export const ProductDetailModal = ({ product, isOpen, onClose, onAdd, visitorCur
                 <ShoppingCart size={18} />
                 {product.stock === 0 ? "Sin stock" : "Agregar al pedido"}
               </button>
+
+              {relatedProducts && relatedProducts.length > 0 && (
+                <div className="space-y-3 pt-2 border-t border-[color:var(--glass-border)]">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-foreground-secondary">
+                    También te puede interesar
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {relatedProducts.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => onSelectRelated?.(p)}
+                        className="text-left p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                      >
+                        <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-surface mb-2">
+                          <Image src={p.images[0] ?? FALLBACK_IMAGE} alt={p.name} fill unoptimized className="object-cover" />
+                        </div>
+                        <p className="text-xs font-semibold line-clamp-2">{p.name}</p>
+                        <p className="text-xs text-primary font-bold">{formatPrice(p.price, p.currency)}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         </>

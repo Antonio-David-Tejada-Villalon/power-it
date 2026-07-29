@@ -185,6 +185,21 @@ export default function CatalogPage() {
     setIsDetailOpen(true);
   };
 
+  // BIZ-03: 4 productos de la misma categoría, sin depender de ningún modelo
+  // nuevo — ya tenemos el catálogo completo cargado en memoria (QA-02).
+  const relatedProducts = useMemo(() => {
+    if (!selectedProduct) return [];
+    const categoryId =
+      typeof selectedProduct.category === "object" ? selectedProduct.category.id : selectedProduct.category;
+    return products
+      .filter((p) => {
+        if (p.id === selectedProduct.id) return false;
+        const pCategoryId = typeof p.category === "object" ? p.category.id : p.category;
+        return pCategoryId === categoryId;
+      })
+      .slice(0, 4);
+  }, [products, selectedProduct]);
+
   const handleExport = async (fileName: string, type: "excel" | "pdf") => {
     if (type === "excel") {
       await exportToExcel(cart, fileName);
@@ -427,6 +442,8 @@ export default function CatalogPage() {
         onAdd={addToCart}
         visitorCurrency={visitorCurrency}
         rates={rates}
+        relatedProducts={relatedProducts}
+        onSelectRelated={handleShowDetails}
       />
 
       <CartSidebar

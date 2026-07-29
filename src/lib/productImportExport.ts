@@ -3,6 +3,7 @@
 import * as XLSX from "xlsx";
 import { saveFile } from "@/lib/exportUtils";
 import { CURRENCIES } from "@/lib/currency";
+import { sanitizeSpreadsheetCell } from "@/lib/utils";
 import type { Product, Category } from "@/lib/types";
 
 export const IMPORT_HEADERS = [
@@ -143,21 +144,23 @@ export function parseProductImportFile(file: File): Promise<ProductImportRow[]> 
 /** Exporta productos con el mismo formato de columnas que la plantilla, para poder re-importarlos. */
 export async function exportProductsToExcel(products: Product[], fileName: string) {
   const rows = products.map((p) => ({
-    SKU: p.sku,
-    ISBN: p.isbn ?? "",
-    Nombre: p.name,
-    Slug: p.slug,
-    Descripcion: p.description,
+    SKU: sanitizeSpreadsheetCell(p.sku),
+    ISBN: sanitizeSpreadsheetCell(p.isbn ?? ""),
+    Nombre: sanitizeSpreadsheetCell(p.name),
+    Slug: sanitizeSpreadsheetCell(p.slug),
+    Descripcion: sanitizeSpreadsheetCell(p.description),
     Precio: p.price,
     Moneda: p.currency,
     PrecioComparacion: p.compareAtPrice ?? "",
     Stock: p.stock,
-    Categoria: typeof p.category === "object" ? p.category.name : "",
-    Marca: p.brand ?? "",
-    Imagenes: p.images.join(", "),
-    Especificaciones: Object.entries(p.specs ?? {})
-      .map(([k, v]) => `${k}: ${v}`)
-      .join("; "),
+    Categoria: sanitizeSpreadsheetCell(typeof p.category === "object" ? p.category.name : ""),
+    Marca: sanitizeSpreadsheetCell(p.brand ?? ""),
+    Imagenes: sanitizeSpreadsheetCell(p.images.join(", ")),
+    Especificaciones: sanitizeSpreadsheetCell(
+      Object.entries(p.specs ?? {})
+        .map(([k, v]) => `${k}: ${v}`)
+        .join("; ")
+    ),
     Estado: p.status,
     Destacado: p.featured ? "Si" : "No",
   }));

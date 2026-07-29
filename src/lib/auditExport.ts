@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { saveFile } from "@/lib/exportUtils";
+import { sanitizeSpreadsheetCell } from "@/lib/utils";
 
 export interface AuditLogRow {
   id: string;
@@ -17,10 +18,10 @@ export interface AuditLogRow {
 export const exportAuditToExcel = async (logs: AuditLogRow[], fileName: string) => {
   const data = logs.map((log) => ({
     Fecha: new Date(log.createdAt).toLocaleString("es"),
-    Acción: log.action,
-    Usuario: log.actorEmail,
-    Recurso: log.resourceType,
-    "ID de recurso": log.resourceId ?? "",
+    Acción: sanitizeSpreadsheetCell(log.action),
+    Usuario: sanitizeSpreadsheetCell(log.actorEmail),
+    Recurso: sanitizeSpreadsheetCell(log.resourceType),
+    "ID de recurso": sanitizeSpreadsheetCell(log.resourceId ?? ""),
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(data);

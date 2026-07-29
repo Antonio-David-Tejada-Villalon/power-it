@@ -46,6 +46,10 @@ const OrderSchema = new Schema(
     assignedTo: { type: Schema.Types.ObjectId, ref: "User" },
     notes: String,
     source: { type: String, enum: ["web", "admin"], default: "web" },
+    // Soft-delete (DATA-03): borrar un pedido de verdad perdía el historial
+    // completo salvo lo que Auditoría loguea del hecho (no el contenido). Un
+    // pedido "eliminado" queda oculto de listados/KPIs pero preservado acá.
+    deletedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

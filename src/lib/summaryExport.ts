@@ -5,6 +5,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { saveFile } from "@/lib/exportUtils";
 import { formatPrice } from "@/lib/currency";
+import { sanitizeSpreadsheetCell } from "@/lib/utils";
 
 export interface SummaryKpi {
   label: string;
@@ -60,8 +61,8 @@ export async function exportSummaryToExcel(
   if (topProducts.length > 0) {
     const rankingRows = topProducts.map((p, i) => ({
       "#": i + 1,
-      Producto: p.name,
-      SKU: p.sku,
+      Producto: sanitizeSpreadsheetCell(p.name),
+      SKU: sanitizeSpreadsheetCell(p.sku),
       "Unidades vendidas": p.unitsSold,
       Ingresos: p.revenue,
     }));

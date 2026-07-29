@@ -39,6 +39,25 @@ const ACTION_COPY: Record<Action, { title: string; description: string; confirmL
   },
 };
 
+function daysPending(createdAt: string): number {
+  const diffMs = Date.now() - new Date(createdAt).getTime();
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+}
+
+/** Sin esto, una solicitud pendiente podía quedar estancada indefinidamente
+ * sin que nadie lo notara salvo entrando a revisar a mano (UX-03). El color
+ * escala con la urgencia real: 3+ días amarillo, 7+ días rojo. */
+function PendingAge({ createdAt }: { createdAt: string }) {
+  const days = daysPending(createdAt);
+  if (days < 1) return null;
+  const tone = days >= 7 ? "text-danger" : days >= 3 ? "text-warning" : "text-foreground-secondary";
+  return (
+    <span className={cn("text-[10px] font-semibold whitespace-nowrap", tone)}>
+      hace {days} {days === 1 ? "día" : "días"}
+    </span>
+  );
+}
+
 function ChangesSummary({ request }: { request: UserEditRequest }) {
   const parts: string[] = [];
   if (request.changes.name) parts.push(`Nombre: ${request.changes.name}`);
@@ -130,7 +149,16 @@ export function RequestsManager() {
         </p>
       ),
     },
-    { key: "status", header: "Estado", render: (r) => <Badge tone={r.status === "pending" ? "pendiente" : undefined}>{STATUS_LABELS[r.status]}</Badge> },
+    {
+      key: "status",
+      header: "Estado",
+      render: (r) => (
+        <div className="flex items-center gap-2">
+          <Badge tone={r.status === "pending" ? "pendiente" : undefined}>{STATUS_LABELS[r.status]}</Badge>
+          {r.status === "pending" && <PendingAge createdAt={r.createdAt} />}
+        </div>
+      ),
+    },
     {
       key: "review",
       header: "Revisión",

@@ -5,7 +5,7 @@ import { Product } from "@/models/Product";
 import { Category } from "@/models/Category";
 import { requirePermission, handleApiError } from "@/lib/auth/guard";
 import { logAudit } from "@/lib/audit";
-import { slugify, isImageUrl } from "@/lib/utils";
+import { slugify, isImageUrl, isValidSpecs, MAX_SPECS_COUNT, MAX_SPEC_KEY_LENGTH, MAX_SPEC_VALUE_LENGTH } from "@/lib/utils";
 import { CURRENCIES, isCurrency, type Currency } from "@/lib/currency";
 
 const VALID_STATUS = ["activo", "agotado", "descontinuado"] as const;
@@ -149,6 +149,16 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      const specs = parseSpecs(row.Especificaciones);
+      if (!isValidSpecs(specs)) {
+        errors.push({
+          row: rowNum,
+          sku,
+          message: `Demasiadas especificaciones o un valor demasiado largo (máx. ${MAX_SPECS_COUNT} especificaciones, ${MAX_SPEC_KEY_LENGTH}/${MAX_SPEC_VALUE_LENGTH} caracteres por clave/valor)`,
+        });
+        continue;
+      }
+
       const stock = toNumber(row.Stock) ?? 0;
       const compareAtPrice = toNumber(row.PrecioComparacion);
       const isbnRaw = row.ISBN !== undefined ? String(row.ISBN).trim() : "";
@@ -166,7 +176,7 @@ export async function POST(request: NextRequest) {
         images,
         category: category._id,
         brand: row.Marca?.trim() || undefined,
-        specs: parseSpecs(row.Especificaciones),
+        specs,
         status: (statusRaw as (typeof VALID_STATUS)[number]) ?? "activo",
         featured: parseFeatured(row.Destacado),
         updatedBy: session.sub,

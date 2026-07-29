@@ -7,7 +7,14 @@ import { toClientProduct } from "@/lib/serializers";
 import { requirePermission, handleApiError } from "@/lib/auth/guard";
 import { logAudit } from "@/lib/audit";
 import { CURRENCIES } from "@/lib/currency";
-import { isImageUrl } from "@/lib/utils";
+import { isImageUrl, isValidSpecs, MAX_SPECS_COUNT, MAX_SPEC_KEY_LENGTH, MAX_SPEC_VALUE_LENGTH } from "@/lib/utils";
+
+const SpecsSchema = z
+  .record(z.string(), z.string())
+  .refine(
+    isValidSpecs,
+    `Demasiadas especificaciones o un valor demasiado largo (máx. ${MAX_SPECS_COUNT} especificaciones, ${MAX_SPEC_KEY_LENGTH}/${MAX_SPEC_VALUE_LENGTH} caracteres por clave/valor)`
+  );
 
 const ImageUrlSchema = z
   .string()
@@ -64,7 +71,7 @@ const ProductInputSchema = z.object({
   images: z.array(ImageUrlSchema).default([]),
   category: z.string().min(1),
   brand: z.string().optional(),
-  specs: z.record(z.string(), z.string()).default({}),
+  specs: SpecsSchema.default({}),
   status: z.enum(["activo", "agotado", "descontinuado"]).default("activo"),
   featured: z.boolean().default(false),
 });
@@ -75,7 +82,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => null);
     const parsed = ProductInputSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: "Datos de producto inválidos" }, { status: 400 });
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Datos de producto inválidos" },
+        { status: 400 }
+      );
     }
 
     await connectDB();

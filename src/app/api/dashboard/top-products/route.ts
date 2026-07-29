@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     // haberse vendido en más de una moneda si cambió su precio/moneda entre
     // pedidos; cada bucket de moneda se convierte a USD antes de sumarlos.
     const results = await Order.aggregate([
-      { $match: { createdAt: { $gte: from, $lte: to }, status: { $ne: "cancelado" } } },
+      { $match: { deletedAt: null, createdAt: { $gte: from, $lte: to }, status: { $ne: "cancelado" } } },
       { $unwind: "$items" },
       {
         $group: {

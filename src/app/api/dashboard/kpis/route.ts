@@ -31,6 +31,10 @@ function startOfMonth(): Date {
   return d;
 }
 
+// Un pedido eliminado (soft-delete, ver DATA-03) no debe seguir contando en
+// ningún KPI ni ranking — el registro sobrevive solo para Auditoría.
+const NOT_DELETED = { deletedAt: null };
+
 function parseRange(params: URLSearchParams): { from: Date; to: Date } {
   const fromParam = params.get("from");
   const toParam = params.get("to");
@@ -46,8 +50,8 @@ export async function GET(request: NextRequest) {
 
     if (session.role === "encargado") {
       const [pedidosHoy, pedidosAsignados] = await Promise.all([
-        Order.countDocuments({ createdAt: { $gte: startOfDay() } }),
-        Order.countDocuments({ assignedTo: session.sub, status: { $ne: "completado" } }),
+        Order.countDocuments({ ...NOT_DELETED, createdAt: { $gte: startOfDay() } }),
+        Order.countDocuments({ ...NOT_DELETED, assignedTo: session.sub, status: { $ne: "completado" } }),
       ]);
       return NextResponse.json({
         kpis: [
@@ -62,15 +66,15 @@ export async function GET(request: NextRequest) {
     const [ventasAgg, pedidosPeriodo, egresosAgg, pedidosCancelados, productosSinStock, usuariosActivos] =
       await Promise.all([
         Order.aggregate([
-          { $match: { createdAt: { $gte: from, $lte: to }, status: { $ne: "cancelado" } } },
+          { $match: { ...NOT_DELETED, createdAt: { $gte: from, $lte: to }, status: { $ne: "cancelado" } } },
           { $group: { _id: "$currency", total: { $sum: "$total" } } },
         ]),
-        Order.countDocuments({ createdAt: { $gte: from, $lte: to }, status: { $ne: "cancelado" } }),
+        Order.countDocuments({ ...NOT_DELETED, createdAt: { $gte: from, $lte: to }, status: { $ne: "cancelado" } }),
         Order.aggregate([
-          { $match: { createdAt: { $gte: from, $lte: to }, status: "cancelado" } },
+          { $match: { ...NOT_DELETED, createdAt: { $gte: from, $lte: to }, status: "cancelado" } },
           { $group: { _id: "$currency", total: { $sum: "$total" } } },
         ]),
-        Order.countDocuments({ createdAt: { $gte: from, $lte: to }, status: "cancelado" }),
+        Order.countDocuments({ ...NOT_DELETED, createdAt: { $gte: from, $lte: to }, status: "cancelado" }),
         Product.countDocuments({ stock: 0 }),
         session.role === "admin" ? User.countDocuments({ status: "active" }) : null,
       ]);

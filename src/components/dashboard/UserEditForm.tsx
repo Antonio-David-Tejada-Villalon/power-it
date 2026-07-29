@@ -36,9 +36,11 @@ export function UserEditForm({ userId }: { userId: string }) {
 
   const isAdmin = actor.role === "admin";
   const isSelf = actor.id === userId;
-  const availableRoles = isAdmin
-    ? (["admin", "supervisor", "encargado", "operario", "cliente"] as Role[])
-    : Array.from(new Set([...manageableRoles(actor.role), role]));
+  // manageableRoles("admin") ya incluye los 5 roles — una sola fuente de
+  // verdad, sin repetir el listado a mano en paralelo a hierarchy.ts. El Set
+  // con `role` cubre el caso de un rol ya asignado que el actor no podría
+  // asignar de cero (para que no desaparezca del <select>).
+  const availableRoles = Array.from(new Set([...manageableRoles(actor.role), role]));
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

@@ -19,7 +19,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
   }
 
   await connectDB();
-  const order = await Order.findById(id).lean();
+  const order = await Order.findOne({ _id: id, deletedAt: null }).lean();
   if (!order) return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
 
   const isOwner = order.customer?.user && String(order.customer.user) === session.sub;
@@ -63,7 +63,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const updates = isEncargado ? { status: parsed.data.status } : parsed.data;
 
     await connectDB();
-    const current = await Order.findById(id);
+    const current = await Order.findOne({ _id: id, deletedAt: null });
     if (!current) return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
 
     let stockNote: string | undefined;
@@ -112,14 +112,15 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     const { id } = await params;
 
     await connectDB();
-    const order = await Order.findById(id);
+    const order = await Order.findOne({ _id: id, deletedAt: null });
     if (!order) return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
 
     if (order.status !== "cancelado") {
       await releaseStock(toStockItems(order));
     }
 
-    await order.deleteOne();
+    order.deletedAt = new Date();
+    await order.save();
 
     await logAudit({
       actorId: session.sub,

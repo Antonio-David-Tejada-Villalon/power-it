@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     const own = request.nextUrl.searchParams.get("own") === "true";
     const status = request.nextUrl.searchParams.get("status");
 
-    const query: QueryFilter<OrderDoc> = {};
+    const query: QueryFilter<OrderDoc> = { deletedAt: null };
     if (own) query["customer.user"] = session.sub;
     if (status) query.status = status as OrderDoc["status"];
     if (session.role === "encargado" && !own) query.status = { $ne: "cancelado" };

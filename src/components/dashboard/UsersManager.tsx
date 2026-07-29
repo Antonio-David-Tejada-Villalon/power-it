@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Pencil, UserX, Plus } from "lucide-react";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/Badge";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { ClientUser } from "@/lib/types";
 import type { Role } from "@/models/User";
 import { manageableRoles, ROLE_LABELS } from "@/lib/auth/hierarchy";
@@ -16,6 +17,7 @@ export function UsersManager() {
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "" as Role | "" });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [suspendTarget, setSuspendTarget] = useState<ClientUser | null>(null);
 
   const load = () => {
     fetch("/api/users")
@@ -28,9 +30,9 @@ export function UsersManager() {
   }, []);
 
   const isAdmin = actor.role === "admin";
-  const creatableRoles = isAdmin
-    ? (["admin", "supervisor", "encargado", "operario", "cliente"] as Role[])
-    : manageableRoles(actor.role);
+  // manageableRoles("admin") ya incluye los 5 roles — una sola fuente de
+  // verdad, sin repetir el listado a mano en paralelo a hierarchy.ts.
+  const creatableRoles = manageableRoles(actor.role);
   const defaultRole = form.role || creatableRoles[0] || "";
 
   const handleCreate = async (e: FormEvent) => {
@@ -52,9 +54,10 @@ export function UsersManager() {
     load();
   };
 
-  const handleSuspend = async (id: string) => {
-    if (!confirm("¿Suspender este usuario?")) return;
-    await fetch(`/api/users/${id}`, { method: "DELETE" });
+  const confirmSuspend = async () => {
+    if (!suspendTarget) return;
+    await fetch(`/api/users/${suspendTarget.id}`, { method: "DELETE" });
+    setSuspendTarget(null);
     load();
   };
 
@@ -83,7 +86,7 @@ export function UsersManager() {
             <Pencil size={16} />
           </Link>
           {isAdmin && u.status === "active" && (
-            <button onClick={() => handleSuspend(u.id)} className="p-2 rounded-lg hover:bg-danger/10 text-danger">
+            <button onClick={() => setSuspendTarget(u)} className="p-2 rounded-lg hover:bg-danger/10 text-danger">
               <UserX size={16} />
             </button>
           )}
@@ -136,6 +139,16 @@ export function UsersManager() {
       </form>
       {error && <p className="text-sm text-danger">{error}</p>}
       <DataTable columns={columns} data={users} getRowId={(u) => u.id} emptyMessage="Sin usuarios todavía." />
+
+      <ConfirmDialog
+        open={suspendTarget !== null}
+        title="Suspender usuario"
+        description={`¿Seguro que querés suspender a ${suspendTarget?.name ?? "este usuario"}? No va a poder iniciar sesión hasta que lo reactives.`}
+        confirmLabel="Suspender"
+        tone="danger"
+        onConfirm={confirmSuspend}
+        onCancel={() => setSuspendTarget(null)}
+      />
     </div>
   );
 }
