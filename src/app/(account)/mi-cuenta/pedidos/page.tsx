@@ -7,10 +7,12 @@ import { DataTable, type Column } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/Badge";
 import { Logo } from "@/components/ui/Logo";
 import { formatPrice } from "@/lib/currency";
+import { useSessionKeepAlive } from "@/hooks/useSessionKeepAlive";
 import type { Order } from "@/lib/types";
 
 export default function MyOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  useSessionKeepAlive(true);
 
   useEffect(() => {
     fetch("/api/orders?own=true")

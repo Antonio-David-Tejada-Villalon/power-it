@@ -6,6 +6,7 @@ import { Search, ShoppingBag, ArrowRight, HelpCircle, LayoutDashboard, LogIn, Pa
 import { cn } from "@/lib/utils";
 import type { Product, Category, ClientUser } from "@/lib/types";
 import { useCart } from "@/hooks/useCart";
+import { useSessionKeepAlive } from "@/hooks/useSessionKeepAlive";
 import { ProductCard } from "@/components/catalog/ProductCard";
 import { CategorySidebar } from "@/components/catalog/CategorySidebar";
 import { DeveloperCredit } from "@/components/catalog/DeveloperCredit";
@@ -42,6 +43,7 @@ export default function CatalogPage() {
 
   const { cart, addToCart, removeFromCart, updateQuantity, clearCart, isSidebarOpen, setIsSidebarOpen, syncWithAccount } =
     useCart();
+  useSessionKeepAlive(Boolean(user));
 
   // El buscador/filtros del catálogo trabajan en memoria sobre el listado
   // completo (specs disponibles, rango de precio, etc.), así que acá se trae

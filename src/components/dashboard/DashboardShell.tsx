@@ -7,10 +7,12 @@ import { Topbar } from "@/components/ui/Topbar";
 import { NAV_BY_ROLE } from "@/lib/dashboardNav";
 import type { ClientUser } from "@/lib/types";
 import { SessionProvider } from "@/components/dashboard/SessionContext";
+import { useSessionKeepAlive } from "@/hooks/useSessionKeepAlive";
 
 export function DashboardShell({ user, children }: { user: ClientUser; children: ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const items = NAV_BY_ROLE[user.role];
+  useSessionKeepAlive(true);
 
   return (
     <SessionProvider user={user}>
