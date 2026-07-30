@@ -5,7 +5,15 @@ import { Product } from "@/models/Product";
 import { Category } from "@/models/Category";
 import { requirePermission, handleApiError } from "@/lib/auth/guard";
 import { logAudit } from "@/lib/audit";
-import { slugify, isImageUrl, isValidSpecs, MAX_SPECS_COUNT, MAX_SPEC_KEY_LENGTH, MAX_SPEC_VALUE_LENGTH } from "@/lib/utils";
+import {
+  slugify,
+  isImageUrl,
+  isValidSpecs,
+  MAX_SPECS_COUNT,
+  MAX_SPEC_KEY_LENGTH,
+  MAX_SPEC_VALUE_LENGTH,
+  PRODUCT_DESCRIPTION_MAX_LENGTH,
+} from "@/lib/utils";
 import { CURRENCIES, isCurrency, type Currency } from "@/lib/currency";
 
 const VALID_STATUS = ["activo", "agotado", "descontinuado"] as const;
@@ -159,6 +167,16 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      const description = row.Descripcion?.trim() ?? "";
+      if (description.length > PRODUCT_DESCRIPTION_MAX_LENGTH) {
+        errors.push({
+          row: rowNum,
+          sku,
+          message: `La descripción no puede superar los ${PRODUCT_DESCRIPTION_MAX_LENGTH} caracteres`,
+        });
+        continue;
+      }
+
       const stock = toNumber(row.Stock) ?? 0;
       const compareAtPrice = toNumber(row.PrecioComparacion);
       const isbnRaw = row.ISBN !== undefined ? String(row.ISBN).trim() : "";
@@ -168,7 +186,7 @@ export async function POST(request: NextRequest) {
       const fields = {
         name,
         slug,
-        description: row.Descripcion?.trim() ?? "",
+        description,
         price,
         currency,
         compareAtPrice,

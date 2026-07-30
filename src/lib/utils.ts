@@ -28,6 +28,10 @@ export function isImageUrl(value: string): boolean {
   }
 }
 
+// Prudencial para una descripción de producto: alcanza para un párrafo y
+// varios puntos en viñeta, sin dar pie a que se cargue un texto kilométrico.
+export const PRODUCT_DESCRIPTION_MAX_LENGTH = 1000;
+
 // Sin esto, un producto podría cargar (a mano o por importación masiva) un
 // mapa de specs arbitrariamente grande — sin romper nada hoy, pero sin
 // ningún límite tampoco (DATA-02).

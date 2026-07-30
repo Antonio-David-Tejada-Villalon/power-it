@@ -7,7 +7,14 @@ import { requireSession, requireRole, handleApiError, ApiAuthError } from "@/lib
 import { hasPermission } from "@/lib/auth/permissions";
 import { logAudit } from "@/lib/audit";
 import { CURRENCIES } from "@/lib/currency";
-import { isImageUrl, isValidSpecs, MAX_SPECS_COUNT, MAX_SPEC_KEY_LENGTH, MAX_SPEC_VALUE_LENGTH } from "@/lib/utils";
+import {
+  isImageUrl,
+  isValidSpecs,
+  MAX_SPECS_COUNT,
+  MAX_SPEC_KEY_LENGTH,
+  MAX_SPEC_VALUE_LENGTH,
+  PRODUCT_DESCRIPTION_MAX_LENGTH,
+} from "@/lib/utils";
 
 const ImageUrlSchema = z
   .string()
@@ -38,7 +45,10 @@ const StockOnlySchema = z.object({ stock: z.number().min(0) });
 const ProductUpdateSchema = z.object({
   isbn: z.string().optional(),
   name: z.string().min(1).optional(),
-  description: z.string().optional(),
+  description: z
+    .string()
+    .max(PRODUCT_DESCRIPTION_MAX_LENGTH, `La descripción no puede superar los ${PRODUCT_DESCRIPTION_MAX_LENGTH} caracteres`)
+    .optional(),
   price: z.number().min(0).optional(),
   currency: z.enum(CURRENCIES).optional(),
   compareAtPrice: z.number().min(0).optional(),

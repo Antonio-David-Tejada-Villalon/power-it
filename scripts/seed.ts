@@ -97,26 +97,41 @@ async function main() {
     { sku: "ACC-002", name: "Silla Gamer Ergonómica", category: "accesorios", brand: "ComfortSit", price: 259, stock: 10, images: [IMG("1592078615290-033ee584e267")], specs: { Material: "Cuero PU", Reclinación: "180°" }, description: "Comodidad y soporte para largas sesiones de trabajo o juego." },
   ];
 
-  for (const p of products) {
-    const categoryId = categories.get(p.category);
-    await Product.findOneAndUpdate(
-      { sku: p.sku },
-      {
-        sku: p.sku,
-        name: p.name,
-        slug: p.sku.toLowerCase(),
-        description: p.description,
-        price: p.price,
-        stock: p.stock,
-        images: p.images,
-        category: categoryId,
-        brand: p.brand,
-        specs: p.specs,
-        status: "activo",
-        featured: p.stock > 20,
-      },
-      { upsert: true, returnDocument: 'after' }
+  // Si ya hay productos en la base, este seed no los toca: correrlo de nuevo
+  // (por ejemplo al actualizar el código en el servidor) no debe resucitar
+  // productos que un admin/supervisor eliminó a propósito desde el panel.
+  // Solo sirve para poblar una base realmente vacía (dev nuevo, o forzado
+  // explícitamente con SEED_FORCE_PRODUCTS=yes).
+  const existingProductCount = await Product.countDocuments();
+  const forceReseedProducts = process.env.SEED_FORCE_PRODUCTS === "yes";
+
+  if (existingProductCount > 0 && !forceReseedProducts) {
+    console.log(
+      `\nℹ️  Ya hay ${existingProductCount} producto(s) en la base — no se tocan (así no se resucitan productos eliminados a mano). ` +
+        `Para forzar el reseed de productos igual, correr con SEED_FORCE_PRODUCTS=yes.\n`
     );
+  } else {
+    for (const p of products) {
+      const categoryId = categories.get(p.category);
+      await Product.findOneAndUpdate(
+        { sku: p.sku },
+        {
+          sku: p.sku,
+          name: p.name,
+          slug: p.sku.toLowerCase(),
+          description: p.description,
+          price: p.price,
+          stock: p.stock,
+          images: p.images,
+          category: categoryId,
+          brand: p.brand,
+          specs: p.specs,
+          status: "activo",
+          featured: p.stock > 20,
+        },
+        { upsert: true, returnDocument: 'after' }
+      );
+    }
   }
 
   const seedAdminEmail = process.env.SEED_ADMIN_EMAIL ?? "admin@powerit.local";

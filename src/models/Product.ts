@@ -1,5 +1,6 @@
 import { Schema, model, models, type InferSchemaType, type Model, type Types } from "mongoose";
 import { CURRENCIES } from "@/lib/currency";
+import { PRODUCT_DESCRIPTION_MAX_LENGTH } from "@/lib/utils";
 
 const ProductSchema = new Schema(
   {
@@ -7,7 +8,7 @@ const ProductSchema = new Schema(
     isbn: { type: String, trim: true, unique: true, sparse: true },
     name: { type: String, required: true, trim: true },
     slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    description: { type: String, default: "" },
+    description: { type: String, default: "", maxlength: PRODUCT_DESCRIPTION_MAX_LENGTH },
     price: { type: Number, required: true, min: 0 },
     // Moneda en la que se cargó `price` (y `compareAtPrice`). "USD" por
     // default para no reinterpretar silenciosamente los productos ya

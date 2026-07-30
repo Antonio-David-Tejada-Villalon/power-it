@@ -7,7 +7,14 @@ import { toClientProduct } from "@/lib/serializers";
 import { requirePermission, handleApiError } from "@/lib/auth/guard";
 import { logAudit } from "@/lib/audit";
 import { CURRENCIES } from "@/lib/currency";
-import { isImageUrl, isValidSpecs, MAX_SPECS_COUNT, MAX_SPEC_KEY_LENGTH, MAX_SPEC_VALUE_LENGTH } from "@/lib/utils";
+import {
+  isImageUrl,
+  isValidSpecs,
+  MAX_SPECS_COUNT,
+  MAX_SPEC_KEY_LENGTH,
+  MAX_SPEC_VALUE_LENGTH,
+  PRODUCT_DESCRIPTION_MAX_LENGTH,
+} from "@/lib/utils";
 
 const SpecsSchema = z
   .record(z.string(), z.string())
@@ -63,7 +70,11 @@ const ProductInputSchema = z.object({
     .transform((v) => (v && v.trim() !== "" ? v.trim() : undefined)),
   name: z.string().min(1),
   slug: z.string().min(1),
-  description: z.string().optional().default(""),
+  description: z
+    .string()
+    .max(PRODUCT_DESCRIPTION_MAX_LENGTH, `La descripción no puede superar los ${PRODUCT_DESCRIPTION_MAX_LENGTH} caracteres`)
+    .optional()
+    .default(""),
   price: z.number().min(0),
   currency: z.enum(CURRENCIES).default("USD"),
   compareAtPrice: z.number().min(0).optional(),

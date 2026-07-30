@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, Wand2, ScanBarcode } from "lucide-react";
-import { slugify, isImageUrl } from "@/lib/utils";
+import { slugify, isImageUrl, PRODUCT_DESCRIPTION_MAX_LENGTH } from "@/lib/utils";
 import { CURRENCIES, CURRENCY_LABELS } from "@/lib/currency";
+import { RichTextField } from "@/components/ui/RichTextField";
 import type { Category, Product } from "@/lib/types";
 
 interface ProductFormProps {
@@ -217,11 +218,11 @@ export function ProductForm({ productId }: ProductFormProps) {
 
       <div className="space-y-1">
         <label className="text-sm font-semibold">Descripción</label>
-        <textarea
+        <RichTextField
           value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-          rows={3}
-          className={inputClass}
+          onChange={(value) => setForm({ ...form, description: value })}
+          maxLength={PRODUCT_DESCRIPTION_MAX_LENGTH}
+          rows={4}
         />
       </div>
 

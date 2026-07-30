@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Cpu, ShoppingCart } from "lucide-react";
 import Image from "next/image";
+import ReactMarkdown from "react-markdown";
 import type { Product } from "@/lib/types";
 import { formatPrice, convertAmount, type Currency, type RateTable } from "@/lib/currency";
 
@@ -102,7 +103,9 @@ export const ProductDetailModal = ({
 
                 <div className="w-12 h-1 bg-primary/30 rounded-full" />
 
-                <p className="text-base leading-relaxed text-foreground-secondary">{product.description}</p>
+                <div className="text-base leading-relaxed text-foreground-secondary space-y-2 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5 [&_strong]:text-foreground [&_strong]:font-semibold">
+                  <ReactMarkdown>{product.description}</ReactMarkdown>
+                </div>
               </div>
 
               {specs.length > 0 && (
