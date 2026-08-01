@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, Wand2, ScanBarcode } from "lucide-react";
 import { slugify, isImageUrl, PRODUCT_DESCRIPTION_MAX_LENGTH } from "@/lib/utils";
 import { CURRENCIES, CURRENCY_LABELS } from "@/lib/currency";
 import { RichTextField } from "@/components/ui/RichTextField";
+import { buildChildrenMap, getAncestorChain, CATEGORY_LEVEL_LABELS } from "@/lib/categoryHierarchy";
 import type { Category, Product } from "@/lib/types";
 
 interface ProductFormProps {
@@ -27,7 +28,6 @@ const emptyForm = {
   currency: "USD" as Product["currency"],
   stock: 0,
   images: "",
-  category: "",
   brand: "",
   status: "activo" as Product["status"],
   featured: false,
@@ -41,6 +41,17 @@ export function ProductForm({ productId }: ProductFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // Selects en cascada Categoría > Subcategoría > Familia — el id que se
+  // manda al guardar siempre es el del nivel más específico elegido.
+  const [categoryPath, setCategoryPath] = useState({ level1: "", level2: "", level3: "" });
+  const [loadedCategoryId, setLoadedCategoryId] = useState("");
+  const categoryPathInitialized = useRef(false);
+  const categoryId = categoryPath.level3 || categoryPath.level2 || categoryPath.level1;
+  const childrenMap = useMemo(() => buildChildrenMap(categories), [categories]);
+  const level1Options = childrenMap.get(null) ?? [];
+  const level2Options = categoryPath.level1 ? childrenMap.get(categoryPath.level1) ?? [] : [];
+  const level3Options = categoryPath.level2 ? childrenMap.get(categoryPath.level2) ?? [] : [];
 
   // Los lectores de código de barras escriben como si fuera un teclado y
   // terminan con Enter — evitamos que eso envíe el formulario de una y en
@@ -58,6 +69,24 @@ export function ProductForm({ productId }: ProductFormProps) {
       .then((data) => setCategories(data.items ?? []));
   }, []);
 
+  // Al editar un producto existente, una vez que categorías y producto ya
+  // cargaron, reconstruye la cascada a partir del id de categoría guardado
+  // (camino completo desde la raíz hasta ese nodo) — hidratación desde una
+  // fuente externa asincrónica, igual que el patrón de useCart.ts.
+  useEffect(() => {
+    if (categoryPathInitialized.current || categories.length === 0 || !loadedCategoryId) return;
+    const categoriesById = new Map(categories.map((c) => [c.id, c]));
+    const chain = getAncestorChain(loadedCategoryId, categoriesById);
+    if (chain.length === 0) return;
+    categoryPathInitialized.current = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCategoryPath({
+      level1: chain[0]?.id ?? "",
+      level2: chain[1]?.id ?? "",
+      level3: chain[2]?.id ?? "",
+    });
+  }, [categories, loadedCategoryId]);
+
   useEffect(() => {
     if (!productId) return;
     fetch(`/api/products/${productId}`)
@@ -74,11 +103,11 @@ export function ProductForm({ productId }: ProductFormProps) {
           currency: p.currency,
           stock: p.stock,
           images: p.images.join(", "),
-          category: typeof p.category === "object" ? p.category.id : p.category,
           brand: p.brand ?? "",
           status: p.status,
           featured: p.featured,
         });
+        setLoadedCategoryId(typeof p.category === "object" ? p.category.id : p.category);
         setSpecs(Object.entries(p.specs ?? {}).map(([key, value]) => ({ key, value })));
       });
   }, [productId]);
@@ -94,6 +123,11 @@ export function ProductForm({ productId }: ProductFormProps) {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!categoryId) {
+      setError("Elegí una categoría para el producto");
+      return;
+    }
 
     const images = form.images
       .split(",")
@@ -111,6 +145,7 @@ export function ProductForm({ productId }: ProductFormProps) {
 
     const payload = {
       ...form,
+      category: categoryId,
       images,
       specs: Object.fromEntries(
         specs
@@ -266,27 +301,59 @@ export function ProductForm({ productId }: ProductFormProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <label className="text-sm font-semibold">Categoría</label>
+      <div className="space-y-1">
+        <label className="text-sm font-semibold">Categoría</label>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <select
             required
-            value={form.category}
-            onChange={(e) => setForm({ ...form, category: e.target.value })}
+            value={categoryPath.level1}
+            onChange={(e) => setCategoryPath({ level1: e.target.value, level2: "", level3: "" })}
             className={inputClass}
           >
-            <option value="">Selecciona...</option>
-            {categories.map((c) => (
+            <option value="">{CATEGORY_LEVEL_LABELS[1]}...</option>
+            {level1Options.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
             ))}
           </select>
+          {level2Options.length > 0 && (
+            <select
+              value={categoryPath.level2}
+              onChange={(e) => setCategoryPath((p) => ({ ...p, level2: e.target.value, level3: "" }))}
+              className={inputClass}
+            >
+              <option value="">{CATEGORY_LEVEL_LABELS[2]} (opcional)...</option>
+              {level2Options.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {level3Options.length > 0 && (
+            <select
+              value={categoryPath.level3}
+              onChange={(e) => setCategoryPath((p) => ({ ...p, level3: e.target.value }))}
+              className={inputClass}
+            >
+              <option value="">{CATEGORY_LEVEL_LABELS[3]} (opcional)...</option>
+              {level3Options.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
-        <div className="space-y-1">
-          <label className="text-sm font-semibold">Marca</label>
-          <input value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} className={inputClass} />
-        </div>
+        <p className="text-xs text-foreground-secondary">
+          Elegí la categoría más específica que aplique — subcategoría y familia son opcionales si esa rama no las tiene.
+        </p>
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-sm font-semibold">Marca</label>
+        <input value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} className={inputClass} />
       </div>
 
       <div className="space-y-1">

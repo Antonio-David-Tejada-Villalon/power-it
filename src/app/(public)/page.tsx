@@ -18,6 +18,7 @@ import { CheckoutOptionsModal } from "@/components/catalog/CheckoutOptionsModal"
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Logo } from "@/components/ui/Logo";
 import { exportToExcel, exportToPDF } from "@/lib/exportUtils";
+import { categoryMatchesFilter } from "@/lib/categoryHierarchy";
 import Link from "next/link";
 import type { Currency, RateTable } from "@/lib/currency";
 
@@ -97,6 +98,8 @@ export default function CatalogPage() {
       });
   }, [syncWithAccount]);
 
+  const categoriesById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+
   // Etapa 1: por texto de búsqueda + categoría. De este subconjunto se derivan
   // las especificaciones y el rango de precio disponibles para afinar la búsqueda.
   const searchCategoryFiltered = useMemo(() => {
@@ -107,10 +110,13 @@ export default function CatalogPage() {
         product.description.toLowerCase().includes(term) ||
         (product.brand ?? "").toLowerCase().includes(term);
       const categoryId = typeof product.category === "object" ? product.category.id : product.category;
-      const matchesCategory = !activeCategory || categoryId === activeCategory;
+      // Elegir una categoría de nivel superior también muestra productos de
+      // sus subcategorías/familias (ej. "Notebooks" incluye "Gaming", "Hogar"...).
+      const matchesCategory =
+        !activeCategory || (categoryId ? categoryMatchesFilter(categoryId, activeCategory, categoriesById) : false);
       return matchesSearch && matchesCategory;
     });
-  }, [products, searchTerm, activeCategory]);
+  }, [products, searchTerm, activeCategory, categoriesById]);
 
   const showRefineFilters = activeCategory !== null || searchTerm.trim() !== "";
 

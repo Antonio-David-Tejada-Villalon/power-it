@@ -59,6 +59,12 @@ export function toClientCategory(doc: LeanDoc): Category {
     name: doc.name,
     slug: doc.slug,
     description: doc.description,
+    // .lean() no aplica defaults de schema a docs que ya existían antes de
+    // este campo — sin el ?? acá, una categoría vieja llegaría con level
+    // undefined y rompería cualquier lógica de árbol del lado del cliente.
+    parent: doc.parent ? String(doc.parent) : null,
+    level: doc.level ?? 1,
+    order: doc.order ?? 0,
     image: doc.image,
     status: doc.status,
   };

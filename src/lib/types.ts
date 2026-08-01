@@ -59,6 +59,9 @@ export interface Category {
   name: string;
   slug: string;
   description?: string;
+  parent: string | null;
+  level: 1 | 2 | 3;
+  order: number;
   image?: string;
   status: "activa" | "inactiva";
 }

@@ -7,7 +7,7 @@ import type { MongoMemoryReplSet } from "mongodb-memory-server";
 // importe uno de ellos directamente (necesario para que populate() funcione
 // sin depender del orden de imports de cada route handler).
 import "@/models/User";
-import "@/models/Category";
+import { Category } from "@/models/Category";
 import "@/models/Product";
 import "@/models/Order";
 import "@/models/AuditLog";
@@ -64,9 +64,18 @@ export async function connectDB(): Promise<typeof mongoose> {
   if (cache.conn) return cache.conn;
 
   if (!cache.promise) {
-    cache.promise = resolveConnectionUri().then((uri) =>
-      mongoose.connect(uri, { bufferCommands: false })
-    );
+    cache.promise = resolveConnectionUri()
+      .then((uri) => mongoose.connect(uri, { bufferCommands: false }))
+      .then(async (conn) => {
+        // El índice único de `slug` en Category pasó de ser global a
+        // (parent, slug) para permitir nombres repetidos en ramas distintas
+        // (ej. "Hogar" bajo Notebooks y bajo PC de Escritorio) — Mongoose
+        // crea el índice nuevo solo, pero nunca borra el viejo de un solo
+        // campo. Corre una sola vez por conexión (no por request), así que
+        // es seguro incluso contra la base de producción ya en uso.
+        await Category.syncIndexes();
+        return conn;
+      });
   }
 
   try {
