@@ -13,6 +13,11 @@ function startOfMonth(): Date {
   return d;
 }
 
+// Moneda de referencia del dashboard de Resumen — el negocio opera en
+// Argentina, así que el ranking se ve en pesos sin importar en qué moneda
+// se haya cargado cada pedido.
+const REPORTING_CURRENCY: Currency = "ARS";
+
 export async function GET(request: NextRequest) {
   try {
     await requireRole(["admin", "supervisor"]);
@@ -27,7 +32,8 @@ export async function GET(request: NextRequest) {
 
     // Se agrupa por (producto, moneda) porque un mismo producto puede
     // haberse vendido en más de una moneda si cambió su precio/moneda entre
-    // pedidos; cada bucket de moneda se convierte a USD antes de sumarlos.
+    // pedidos; cada bucket de moneda se convierte a la moneda de referencia
+    // antes de sumarlos.
     const results = await Order.aggregate([
       { $match: { deletedAt: null, createdAt: { $gte: from, $lte: to }, status: { $ne: "cancelado" } } },
       { $unwind: "$items" },
@@ -43,19 +49,19 @@ export async function GET(request: NextRequest) {
     ]);
 
     const rates = await getExchangeRates();
-    const byProduct = new Map<string, { sku: string; name: string; unitsSold: number; revenueUSD: number }>();
+    const byProduct = new Map<string, { sku: string; name: string; unitsSold: number; revenueARS: number }>();
 
     for (const r of results) {
       const productId = String(r._id.product);
       const currency: Currency = isCurrency(r._id.currency) ? r._id.currency : "USD";
-      const revenueUSD = convertAmount(r.revenue, currency, "USD", rates);
+      const revenueARS = convertAmount(r.revenue, currency, REPORTING_CURRENCY, rates);
 
       const existing = byProduct.get(productId);
       if (existing) {
         existing.unitsSold += r.unitsSold;
-        existing.revenueUSD += revenueUSD;
+        existing.revenueARS += revenueARS;
       } else {
-        byProduct.set(productId, { sku: r.sku, name: r.name, unitsSold: r.unitsSold, revenueUSD });
+        byProduct.set(productId, { sku: r.sku, name: r.name, unitsSold: r.unitsSold, revenueARS });
       }
     }
 
@@ -73,7 +79,7 @@ export async function GET(request: NextRequest) {
       sku: data.sku,
       name: data.name,
       unitsSold: data.unitsSold,
-      revenue: data.revenueUSD,
+      revenue: data.revenueARS,
       image: imageById.get(productId) ?? null,
     }));
 

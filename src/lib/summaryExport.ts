@@ -22,11 +22,11 @@ export interface SummaryTopProduct {
 }
 
 const KPI_EXPLANATIONS: Record<string, string> = {
-  "Ventas del período (USD)":
-    "Suma del total de los pedidos no cancelados creados dentro del rango de fechas seleccionado. Los pedidos en otras monedas se convierten a USD con el tipo de cambio vigente al generar el reporte.",
+  "Ventas del período (ARS)":
+    "Suma del total de los pedidos no cancelados creados dentro del rango de fechas seleccionado. Los pedidos en otras monedas se convierten a pesos argentinos con el tipo de cambio vigente al generar el reporte.",
   "Pedidos del período": "Cantidad de pedidos no cancelados creados dentro del rango de fechas seleccionado.",
-  "Egresos (cancelados, USD)":
-    "Valor total de los pedidos cancelados dentro del rango de fechas seleccionado (dinero reservado que no se concretó), convertido a USD.",
+  "Egresos (cancelados, ARS)":
+    "Valor total de los pedidos cancelados dentro del rango de fechas seleccionado (dinero reservado que no se concretó), convertido a pesos argentinos.",
   "Pedidos cancelados": "Cantidad de pedidos cancelados dentro del rango de fechas seleccionado.",
   "Productos sin stock": "Cantidad de productos con stock en 0 al momento de generar este reporte (no depende del rango de fechas).",
   "Usuarios activos": "Cantidad de usuarios del equipo con estado activo al momento de generar este reporte.",
@@ -35,7 +35,7 @@ const KPI_EXPLANATIONS: Record<string, string> = {
 };
 
 function formatKpiValue(kpi: SummaryKpi): string {
-  return kpi.format === "currency" ? formatPrice(kpi.value, "USD") : String(kpi.value);
+  return kpi.format === "currency" ? formatPrice(kpi.value, "ARS") : String(kpi.value);
 }
 
 export async function exportSummaryToExcel(
@@ -64,7 +64,7 @@ export async function exportSummaryToExcel(
       Producto: sanitizeSpreadsheetCell(p.name),
       SKU: sanitizeSpreadsheetCell(p.sku),
       "Unidades vendidas": p.unitsSold,
-      Ingresos: p.revenue,
+      "Ingresos (ARS)": p.revenue,
     }));
     const rankingSheet = XLSX.utils.json_to_sheet(rankingRows);
     XLSX.utils.book_append_sheet(workbook, rankingSheet, "Ranking de Ventas");
@@ -108,13 +108,13 @@ export async function exportSummaryToPDF(
     doc.text("Ranking de productos más vendidos", 14, afterKpisY);
 
     autoTable(doc, {
-      head: [["#", "Producto", "SKU", "Unidades", "Ingresos"]],
+      head: [["#", "Producto", "SKU", "Unidades", "Ingresos (ARS)"]],
       body: topProducts.map((p, i) => [
         String(i + 1),
         p.name,
         p.sku,
         String(p.unitsSold),
-        formatPrice(p.revenue, "USD"),
+        formatPrice(p.revenue, "ARS"),
       ]),
       startY: afterKpisY + 6,
       theme: "grid",

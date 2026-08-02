@@ -67,7 +67,7 @@ export function TopProductsRanking({ from, to }: TopProductsRankingProps) {
               </div>
               <div className="text-right flex-shrink-0">
                 <p className="font-semibold text-sm">{item.unitsSold} unid.</p>
-                <p className="text-xs text-foreground-secondary">{formatPrice(item.revenue, "USD")}</p>
+                <p className="text-xs text-foreground-secondary">{formatPrice(item.revenue, "ARS")}</p>
               </div>
             </div>
           ))}

@@ -7,14 +7,19 @@ import { requireSession, handleApiError } from "@/lib/auth/guard";
 import { getExchangeRates } from "@/lib/exchangeRates";
 import { convertAmount, isCurrency, type Currency } from "@/lib/currency";
 
+// Moneda de referencia del dashboard de Resumen — el negocio opera en
+// Argentina, así que todo ahí se ve en pesos independientemente de en qué
+// moneda se haya cargado cada pedido.
+const REPORTING_CURRENCY: Currency = "ARS";
+
 /** Los pedidos pueden estar en distintas monedas — se agrupan por moneda y
- * se convierten todas a USD (moneda de referencia del dashboard) antes de
- * sumarlas, para que el KPI final sea un solo número con sentido. */
+ * se convierten todas a la moneda de referencia antes de sumarlas, para que
+ * el KPI final sea un solo número con sentido. */
 async function sumAcrossCurrencies(buckets: { _id: string | null; total: number }[]): Promise<number> {
   const rates = await getExchangeRates();
   return buckets.reduce((acc, b) => {
     const currency: Currency = b._id && isCurrency(b._id) ? b._id : "USD";
-    return acc + convertAmount(b.total, currency, "USD", rates);
+    return acc + convertAmount(b.total, currency, REPORTING_CURRENCY, rates);
   }, 0);
 }
 
@@ -85,9 +90,9 @@ export async function GET(request: NextRequest) {
     ]);
 
     const kpis = [
-      { label: "Ventas del período (USD)", value: ventas, format: "currency" },
+      { label: "Ventas del período (ARS)", value: ventas, format: "currency" },
       { label: "Pedidos del período", value: pedidosPeriodo },
-      { label: "Egresos (cancelados, USD)", value: egresos, format: "currency" },
+      { label: "Egresos (cancelados, ARS)", value: egresos, format: "currency" },
       { label: "Pedidos cancelados", value: pedidosCancelados },
       { label: "Productos sin stock", value: productosSinStock },
     ];

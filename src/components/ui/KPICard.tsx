@@ -12,7 +12,7 @@ interface KPICardProps {
 }
 
 export function KPICard({ label, value, format, icon: Icon }: KPICardProps) {
-  const display = format === "currency" && typeof value === "number" ? formatPrice(value, "USD") : value;
+  const display = format === "currency" && typeof value === "number" ? formatPrice(value, "ARS") : value;
 
   return (
     <motion.div
