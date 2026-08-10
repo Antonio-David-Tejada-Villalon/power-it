@@ -21,6 +21,9 @@ function dashboardAreaRoles(pathname: string): string[] {
   if (pathname.startsWith("/dashboard/supervisor")) return ["admin", "supervisor"];
   if (pathname.startsWith("/dashboard/encargado")) return ["admin", "encargado"];
   if (pathname.startsWith("/dashboard/operario")) return ["admin", "operario"];
+  // Manual del sistema: solo para quienes administran el negocio de punta a
+  // punta — encargado, operario y cliente no lo ven ni pueden entrar por URL.
+  if (pathname.startsWith("/dashboard/manual")) return ["admin", "supervisor"];
   return ["admin", "supervisor", "encargado", "operario"];
 }
 
@@ -42,6 +45,12 @@ export async function proxy(request: NextRequest) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("next", pathname);
       return NextResponse.redirect(loginUrl);
+    }
+    // cliente no tiene ninguna vista de dashboard (ni siquiera "/dashboard" a
+    // secas cae en su rol por defecto), así que redirigirlo ahí formaría un
+    // loop infinito — se lo manda directo al catálogo público.
+    if (session.role === "cliente") {
+      return NextResponse.redirect(new URL("/", request.url));
     }
     const allowedRoles = dashboardAreaRoles(pathname);
     if (!allowedRoles.includes(session.role)) {

@@ -10,6 +10,7 @@ import {
   Boxes,
   Inbox,
   UserCircle,
+  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -29,6 +30,7 @@ export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { href: "/dashboard/admin/solicitudes", label: "Solicitudes", icon: Inbox },
     { href: "/dashboard/admin/auditoria", label: "Auditoría", icon: ShieldCheck },
     { href: "/dashboard/admin/configuracion", label: "Configuración", icon: Settings },
+    { href: "/dashboard/manual", label: "Manual del sistema", icon: BookOpen },
     { href: "/dashboard/perfil", label: "Mi perfil", icon: UserCircle },
   ],
   supervisor: [
@@ -37,6 +39,7 @@ export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { href: "/dashboard/supervisor/pedidos", label: "Pedidos", icon: ClipboardList },
     { href: "/dashboard/supervisor/usuarios", label: "Usuarios", icon: Users },
     { href: "/dashboard/supervisor/solicitudes", label: "Solicitudes", icon: Inbox },
+    { href: "/dashboard/manual", label: "Manual del sistema", icon: BookOpen },
     { href: "/dashboard/perfil", label: "Mi perfil", icon: UserCircle },
   ],
   encargado: [
