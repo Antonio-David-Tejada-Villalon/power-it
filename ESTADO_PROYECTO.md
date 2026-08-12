@@ -62,6 +62,7 @@ src/
     (auth)/{login,registro}
     (account)/mi-cuenta/pedidos
     dashboard/perfil            # "Mi perfil" compartido por todos los roles de staff
+    dashboard/manual            # Manual del sistema, solo admin/supervisor (ver proxy.ts)
     dashboard/{admin,supervisor,encargado,operario}/...  # incluye usuarios/ y solicitudes/ por rol
     api/user-requests/...       # listar y revisar (aprobar/rechazar/eliminar) solicitudes de edición
     api/...                    # backend (route handlers)
@@ -202,8 +203,9 @@ Pedido explícito del usuario: una sección dentro del sistema, accesible solo p
 - **Categorías**: árbol de 3 niveles (Categoría > Subcategoría > Familia), alta contextual (raíz o subcategoría de cualquier nodo), edición inline (incluye mover de rama), borrado múltiple (bloquea si tienen productos o subcategorías asociadas).
 - **Pedidos**: máquina de estados con pestañas, reserva real de stock (se descuenta al crear, se devuelve al cancelar, se vuelve a descontar al reactivar con validación de stock disponible), confirmación explícita antes de cualquier cambio de estado, borrado individual/múltiple.
 - **Auditoría**: registro automático de toda acción sensible, filtros (acción/usuario/recurso/fecha), export a Excel/PDF.
-- **Resumen (dashboard)**: rango de fechas con atajos, KPIs (ventas, pedidos, egresos = valor de cancelados, stock, usuarios), ranking de productos más vendidos, export a Excel/PDF con explicación de cada indicador.
+- **Resumen (dashboard)**: rango de fechas con atajos, KPIs en pesos argentinos (ventas, pedidos, egresos = valor de cancelados, stock, usuarios), ranking de productos más vendidos, export a Excel/PDF (también en ARS) con explicación de cada indicador.
 - **Ayuda contextual**: ícono "?" con tips en cada sección del dashboard.
+- **Manual del sistema** (`/dashboard/manual`, solo admin/supervisor): guía en 11 secciones de cómo funciona y se usa todo el panel — roles y permisos, catálogo, productos, categorías, pedidos, usuarios/solicitudes, auditoría, resumen, configuración, sesión/seguridad, dudas frecuentes. Encargado, operario y cliente no lo ven en el menú ni pueden entrar por URL directa (`proxy.ts`).
 - **Marca**: logo real (versión clara/oscura según tema, clickeable a "/" desde cualquier página) + favicon, paleta cyan/azul, tipografías Space Grotesk + Inter. Metadatos Open Graph/Twitter con imagen generada (`src/app/opengraph-image.tsx`) para que los links compartidos (WhatsApp, etc.) muestren logo + título + descripción.
 - **Footer del catálogo**: crédito del desarrollador con email/llamada/WhatsApp clickeables y saludo pre-cargado.
 - **Reconocimiento de cliente recurrente**: pedidos hechos como invitado se vinculan solos a la cuenta si después se registra/loguea con el mismo email; carrito guardado en el servidor por usuario (sobrevive cambio de dispositivo/navegador); enlace "Mis pedidos" visible en el header del catálogo para clientes logueados.
